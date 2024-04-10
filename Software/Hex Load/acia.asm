@@ -9,6 +9,8 @@
 ; The code has been written to use registers only (except for the test
 ; code) to enable usage in a ROM.
 ;
+; v1.1 - 10th April 2024
+;        Added RTS signalling for HW flow control
 ; v1.0 - 7th April 2024
 ;---------------------------------------------------------------------
 
@@ -159,6 +161,40 @@ AC_INIT_1:
             ret
 
 ;---------------------------------------------------------------------
+; Sets the RTS line to logic 1 to signal stop sending data
+;
+; Inputs:
+;   None
+; Updates:
+;   A - contains the character received
+; Destroys:
+;   A, C
+;---------------------------------------------------------------------
+AC_RTS_HIGH:
+            ld		c,AC_P_CONT     ; Set up the ACIA configuration
+            ld		a,AC_CLK64 + AC_8N1 + AC_HR_DI + AC_RI_DIS
+            out     (c),a
+
+            ret
+
+;---------------------------------------------------------------------
+; Sets the RTS line to logic 0 to signal ready to receive data
+;
+; Inputs:
+;   None
+; Updates:
+;   A - contains the character received
+; Destroys:
+;   A, C
+;---------------------------------------------------------------------
+AC_RTS_LOW:
+            ld		c,AC_P_CONT     ; Set up the ACIA configuration
+            ld		a,AC_CLK64 + AC_8N1 + AC_LR_DI + AC_RI_DIS
+            out     (c),a
+
+            ret
+
+;---------------------------------------------------------------------
 ; Receives a character
 ;
 ; Inputs:
@@ -171,6 +207,9 @@ AC_INIT_1:
 AC_RX_CHAR:
             push    bc
             push    de
+            push    hl
+
+            call    AC_RTS_LOW
 
             ld      c,AC_P_CONT     ; Get ACIA status
 AC_RC_1:
@@ -180,6 +219,12 @@ AC_RC_1:
 
             ld      c,AC_P_DATA     ; Get byte from the RX port
             in      a,(c)
+            ld      l,a
+            
+            call    AC_RTS_HIGH
+            ld      a,l
+
+            pop     hl
             pop     de
             pop     bc
 

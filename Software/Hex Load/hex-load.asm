@@ -16,6 +16,8 @@
 ; Requires acia.asm. To use a different comms IC, replace the acia.asm
 ; library which the device specific libray.
 ;
+; v1.1 - 10th April 2024
+;        Added RTS signalling for HW flow control
 ; v1.0 - 7th April 2024
 ;---------------------------------------------------------------------
 
@@ -33,7 +35,7 @@ ESC         .equ    1bh
 
             .org    02000h          ; MPF-1 Expansion ROM
             ;.org    04000h          ; TEC-1G User RAM
-            ;.org    0be00h          ; TEC-1G Expansion RAM/ROM/FRAM
+            ;.org    0bd00h          ; TEC-1G Expansion RAM/ROM/FRAM
             
 MAIN:
             call    AC_INIT         ; Initialise the ACIA
@@ -268,7 +270,7 @@ TO_UPPER:
 MSG_DONE    .db     "Transfer complete.", CR, LF, 0
 MSG_ERROR_1 .db     " <-Syntax error!", CR, LF, 0
 MSG_ERROR_2 .db     "Checksum error!", 0
-MSG_INTRO_1 .db     "Intel hex file loader v1.0", CR, LF, 0
+MSG_INTRO_1 .db     "Intel hex file loader v1.1", CR, LF, 0
 MSG_INTRO_2 .db     "Send file when ready. Press <Esc> to quit.", CR, LF, 0
 MSG_QUIT    .db     "Quitting program.", CR, LF, 0
            
