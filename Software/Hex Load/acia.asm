@@ -195,7 +195,10 @@ AC_RTS_LOW:
             ret
 
 ;---------------------------------------------------------------------
-; Receives a character
+; Receives a character - uses RTS HW flow control to limit how fast
+; the characters are received. As the ACIA has no buffer, the HW
+; flow control is used at the start and end of receiving every
+; character.
 ;
 ; Inputs:
 ;   None
@@ -209,7 +212,7 @@ AC_RX_CHAR:
             push    de
             push    hl
 
-            call    AC_RTS_LOW
+            call    AC_RTS_LOW      ; Other computer can now to send
 
             ld      c,AC_P_CONT     ; Get ACIA status
 AC_RC_1:
@@ -221,7 +224,7 @@ AC_RC_1:
             in      a,(c)
             ld      l,a
             
-            call    AC_RTS_HIGH
+            call    AC_RTS_HIGH     ; Stop other computer from sending
             ld      a,l
 
             pop     hl

@@ -16,6 +16,9 @@
 ; Requires acia.asm. To use a different comms IC, replace the acia.asm
 ; library which the device specific libray.
 ;
+; v1.2 - 12th April 2024
+;        Added re-enabling of RTS on exit to help flush any spurious
+;        characters after the program has finished.
 ; v1.1 - 10th April 2024
 ;        Added RTS signalling for HW flow control
 ; v1.0 - 7th April 2024
@@ -114,7 +117,9 @@ LOAD_ERROR:
 LOAD_EXIT:
             call    CRLF
             
-            rst     00h
+            call    AC_RTS_LOW      ; Other computer can now to send
+
+            rst     00h             ; We are all done.
 LOAD_QUIT:
             ld      hl,MSG_QUIT
             call    AC_TX_STRING    ; Print quit message
@@ -270,7 +275,7 @@ TO_UPPER:
 MSG_DONE    .db     "Transfer complete.", CR, LF, 0
 MSG_ERROR_1 .db     " <-Syntax error!", CR, LF, 0
 MSG_ERROR_2 .db     "Checksum error!", 0
-MSG_INTRO_1 .db     "Intel hex file loader v1.1", CR, LF, 0
+MSG_INTRO_1 .db     "Intel hex file loader v1.2", CR, LF, 0
 MSG_INTRO_2 .db     "Send file when ready. Press <Esc> to quit.", CR, LF, 0
 MSG_QUIT    .db     "Quitting program.", CR, LF, 0
            
