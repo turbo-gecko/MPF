@@ -1,9 +1,9 @@
             .org    1800h
-            ld      ix,HELP
+            ld      ix, HELP
 DISP:
             call    SCAN
             cp      13h
-            jr      nz,DISP
+            jr      nz, DISP
             halt
             
             .org    1820h
