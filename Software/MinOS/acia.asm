@@ -9,6 +9,8 @@
 ; The code has been written to use registers only (except for the test
 ; code)	to enable usage	in a ROM.
 ;
+; v1.3 - 27th July 2024
+;	 Added acia agnostic function names.
 ; v1.2 - 21st July 2024
 ;	 Refactored the style of the code.
 ;	 Added acTxLine - Send a string with a CR/LF.
@@ -112,7 +114,7 @@ acMain:
 		ld hl,CR_LF		; Terminate with another CR/LF
 		call acTxStr
 
-acMain_1:
+acMain_1
 		call acRxChar		; Perform loopback test...
 
 		push af
@@ -129,7 +131,7 @@ acMain_1:
 
 		jr acMain_1
 
-acMain_2:
+acMain_2
 		ld hl,CR_LF		; Send a CR/LF to start	a new line
 		call acTxStr
 
@@ -156,13 +158,14 @@ MSG_START	.db	"ACIA loopback test. Press <Esc> to quit.",0
 ; Destroys:	A, C, DE
 ;---------------------------------------------------------------------
 acInit:
+SER_INIT:
 		ld c,AC_P_CONT		; Reset	the ACIA
 		ld a,AC_RESET
 		out (c),a
 
 		ld de,0100h		; Add delay for reset to take effect
 
-acInit_1:
+acInit_1
 		dec de
 		ld a,d
 		cp 0
@@ -186,6 +189,7 @@ acInit_1:
 ; Destroys:	A, C
 ;---------------------------------------------------------------------
 acRtsHigh:
+SER_RTS_HIGH:
 		ld c,AC_P_CONT		; Set up the ACIA configuration
 		ld a,AC_CLK64 + AC_8N1 + AC_HR_DI + AC_RI_DIS
 		out (c),a
@@ -201,6 +205,7 @@ acRtsHigh:
 ; Destroys:	A, C
 ;---------------------------------------------------------------------
 acRtsLow:
+SER_RTS_LOW:
 		ld c,AC_P_CONT		; Set up the ACIA configuration
 		ld a,AC_CLK64 + AC_8N1 + AC_LR_DI + AC_RI_DIS
 		out (c),a
@@ -219,11 +224,12 @@ acRtsLow:
 ; Destroys:	A, C, HL
 ;---------------------------------------------------------------------
 acRxChar:
+SER_RX_CHAR:
 		call acRtsLow		; Other computer can now to send
 
 		ld c,AC_P_CONT		; Get ACIA status
 
-acRxChar_1:
+acRxChar_1
 		in a,(c)	
 		bit AC_SR_RD,a
 		jr z,acRxChar_1		; Loop until a character is received
@@ -246,10 +252,11 @@ acRxChar_1:
 ; Destroys:	A, BC
 ;---------------------------------------------------------------------
 acTxChar:
+SER_TX_CHAR:
 		push af
 		ld c,AC_P_CONT		; Get ACIA status
 
-acTxChar_1:
+acTxChar_1
 		in a,(c)
 		bit AC_SR_TD,a		; Check to see if the ACIA is ready to accept data
 		jr z,acTxChar_1
@@ -269,6 +276,7 @@ acTxChar_1:
 ; Destroys:	A, C, HL
 ;---------------------------------------------------------------------
 acTxLine:
+SER_TX_LINE:
 		ld a,(hl)		; Get the character from the string
 		cp 0
 		jr z,acTxLine_1		; Reached the end of the string
@@ -276,7 +284,7 @@ acTxLine:
 		inc hl
 		jr acTxLine
 
-acTxLine_1:
+acTxLine_1
 		ld a,0dh		; Carriage return
 		call acTxChar
 		ld a,0ah		; Line feed
@@ -293,6 +301,7 @@ acTxLine_1:
 ; Destroys:	A, C, HL
 ;---------------------------------------------------------------------
 acTxStr:
+SER_TX_STRING:
 		ld a,(hl)		; Get the character from the string
 		cp 0
 		jr z,acTxStr_1		; Reached the end of the string
@@ -300,7 +309,7 @@ acTxStr:
 		inc hl
 		jr acTxStr
 
-acTxStr_1:
+acTxStr_1
 		ret
 
 		.end
