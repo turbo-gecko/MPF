@@ -63,6 +63,8 @@ The expand byte is for future use - indicates if the EXPAND memory is what has b
 | 63     | 1      | table version    | binary | 00                      |
 |        | 64     | total bytes      |        |                         |
 
+Note: Currently date/time functionality is not available in MinOS. Date/time is a future capability and space has been reserved in the FCB for future usage.
+
 
 ## DateTime Structure
 Follows the DS1302 regster set. All times are always saved and read in 24 hour format. All values are stored in BCD format.
