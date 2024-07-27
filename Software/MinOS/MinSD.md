@@ -4,10 +4,15 @@ MinSD is a stripped down SD card memory image loader, designed to fit into the U
 
 The program loads a program from a slot on the SD card into memory, without having to download the file over the serial port, or key in from the keyboard.
 
-The main use case is for loading MinOS to enable full use of the Mem-SDS SD card storage system. In this capacity, MinSD is performing the role of a boot-strap program for MinOS, however it is also a quick way to load other programs from any of the firat 10 slots of the virtual disk 0.
+The main use case is for loading MinOS to enable full use of the Mem-SDS SD card storage system. In this capacity, MinSD is performing the role of a boot-strap program for MinOS, however it is also a quick way to load other programs from any of the first 10 slots of the virtual disk 0.
 
 MinSD should be burned to an EPROM and placed in the U7 ROM socket.
 It occupies less than 1K of memory in the ROM and uses less than 1K of RAM starting from F000H.
+
+The file U7-Utils.bin https://github.com/turbo-gecko/MPF/blob/main/ROM/U7-Utils.bin is a binary file ready for burning into a 2732 EPROM. The programs in the ROM include:
+- 2000H - Hexload program for downloading hex files to the MPF-1
+- 2222H - RAM Finder that displays the memory locations wehere RAM is found.
+- 2400H - MinSD program described on this page.
 
 Note: Additional RAM is required for the program, and it has been designed to make use memory in the upper 32K of RAM. This requires the use of a 32K to 64K RAM board to be fitted to the MPF-1 usually via the 40 pin Z80 bus header.
 
