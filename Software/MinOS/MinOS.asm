@@ -1,6 +1,6 @@
 ; ----------------------------------------------------------------------------
 ; MinOS.asm
-; Version: 0.1
+; Version: 0.3
 ; Last updated: 21/07/2024
 ;
 ; Minimal OS for the MPF-1 trainer.
@@ -44,7 +44,7 @@ mainLoop:
 
 	jr mainLoop			; Go again
 
-mainEscape
+mainEscape:
 	call sendCrLf
 	jr mainLoop
 
@@ -59,6 +59,7 @@ swInfoMsg	.db "Prototype build",0
 ; ----------------------------------------------------------------------------
 
 ; ----------------------------------------------------------------------------
+#include "string.asm"
 #include "acia.asm"
 #include "MinOS_sd.asm"
 
@@ -76,13 +77,13 @@ swInfoMsg	.db "Prototype build",0
 ; ----------------------------------------------------------------------------
 checkSD:
 	call sdInit			; Initialise the SD card
-	jr nc,checkSDOK
+	jr nc,_checkSDOK
 	call sdErrMsg			; Display error message
 
 	scf
 	ret				; Return error
 
-checkSDOK
+_checkSDOK:
 	scf
 	ccf
 	ret				; Return success
@@ -97,20 +98,20 @@ checkSDOK
 ; ----------------------------------------------------------------------------
 checkSDHC:
 	call checkSD			; Initialise and check for an SD card
-	jr nc,checkSDHCOK1
+	jr nc,_checkSDHCOK1
 
 	scf
 	ret				; Return error
 
-checkSDHCOK1
+_checkSDHCOK1:
 	call isSDHC			; Check for an SDHC card
-	jr nc,checkSDHCOK2
+	jr nc,_checkSDHCOK2
 	call sdErrMsg			; Display error message if not
 
 	scf
 	ret				; Return error
 
-checkSDHCOK2
+_checkSDHCOK2:
 	scf
 	ccf
 	ret				; Return success
@@ -128,109 +129,109 @@ commandMenu:
 	ld hl,cmdLineBuff		; 'del' command
 	ld de,cmdDel
 	ld b,3
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDel
 
 	ld hl,cmdLineBuff		; 'dir' command
 	ld de,cmdDir
 	ld b,3
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDir
 
 	ld hl,cmdLineBuff		; 'disk' command
 	ld de,cmdDisk
 	ld b,4
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDisk
 
 	ld hl,cmdLineBuff		; 'format' command
 	ld de,cmdFormat
 	ld b,6
-	call stringCompare
+	call strCompare
 	jp nc,doCmdFormat
 
 	ld hl,cmdLineBuff		; 'hwinfo' command
 	ld de,cmdHwInfo
 	ld b,6
-	call stringCompare
+	call strCompare
 	jp nc,doCmdHwInfo
 
 	ld hl,cmdLineBuff		; 'load' command
 	ld de,cmdLoad
 	ld b,4
-	call stringCompare
+	call strCompare
 	jp nc,doCmdLoad
 
 	ld hl,cmdLineBuff		; 'quit' command
 	ld de,cmdQuit
 	ld b,4
-	call stringCompare
+	call strCompare
 	jp nc,doCmdQuit
 
 	ld hl,cmdLineBuff		; 'ren' command
 	ld de,cmdRen
 	ld b,3
-	call stringCompare
+	call strCompare
 	jp nc,doCmdRen
 
 	ld hl,cmdLineBuff		; 'save' command
 	ld de,cmdSave
 	ld b,4
-	call stringCompare
+	call strCompare
 	jp nc,doCmdSave
 
 	ld hl,cmdLineBuff		; 'sdinfo' command
 	ld de,cmdSdInfo
 	ld b,6
-	call stringCompare
+	call strCompare
 	jp nc,doCmdInfo
 
 	ld hl,cmdLineBuff		; 'sector' command
 	ld de,cmdSector
 	ld b,6
-	call stringCompare
+	call strCompare
 	jp nc,doCmdSector
 
 	ld hl,cmdLineBuff		; 'ver' command
 	ld de,cmdVer
 	ld b,3
-	call stringCompare
+	call strCompare
 	jp nc,doCmdVersion
 
 	ld hl,cmdLineBuff		; 'vol' command
 	ld de,cmdVol
 	ld b,3
-	call stringCompare
+	call strCompare
 	jp nc,doCmdVolume
 
 	ld hl,cmdLineBuff		; '?' command
 	ld de,cmdHelp
 	ld b,1
-	call stringCompare
+	call strCompare
 	jp nc,doCmdHelp
 
 	ld hl,cmdLineBuff		; 'd1' command
 	ld de,cmdDev1
 	ld b,2
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDev1
 
 	ld hl,cmdLineBuff		; 'd2' command
 	ld de,cmdDev2
 	ld b,2
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDev2
 
 	ld hl,cmdLineBuff		; 'd3' command
 	ld de,cmdDev3
 	ld b,2
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDev3
 
 	ld hl,cmdLineBuff		; 'd4' command
 	ld de,cmdDev4
 	ld b,2
-	call stringCompare
+	call strCompare
 	jp nc,doCmdDev4
 
 	ld hl,cmdInvalidMsg		; Must be an invalid command...
@@ -259,7 +260,7 @@ doCmdDel:
 	ld (selectMsgPtr),hl
 
 	call selectSlot			; Get slot number
-	jp c,dclBadParamQuit		; Bail out if invalid slot number
+	jp c,_dclQuit		; Bail out if invalid slot number
 
 	ld a,c				; Update slot number
 	ld (slotNumber),a
@@ -296,35 +297,35 @@ doCmdDir:
 	ld hl,0				; Start with slot 0
 	ld (slotNumber),hl
 
-nextDirSlot
+_dcdiNextSlot:
 	ld a,l
 	call readSlotFCB		; Get the file info
-	jr c,sfMain			; If the slot is an empty file then skip slot
+	jr c,_dcdiMainLoop		; If the slot is an empty file then skip slot
 
 	ld a,13				; Otherwise send a carriage return
 	call SER_TX_CHAR
 
 	call SER_TX_LINE		; And display the file details
 
-sfMain
+_dcdiMainLoop:
 	ld hl,(slotNumber)		; Move to the next slot
 	inc hl
 	ld a,l
 	cp 128				; Check to see if we have iterated through all
-	jr z,mLoopEnd			; 128 slots
+	jr z,_dcdiDone			; 128 slots
 	ld (slotNumber),hl
 
 	ld a,l				; And display . as a progress bar for every 4th
 	and 03h				; slot
 	cp 0
-	jr nz,nextDirSlot
+	jr nz,_dcdiNextSlot
 
 	ld a,'.'
 	call SER_TX_CHAR
 	
-	jr nextDirSlot			; Go again
+	jr _dcdiNextSlot			; Go again
 
-mLoopEnd:
+_dcdiDone:
 	call sendCrLf			; Dir listing is complete so time to exit cmd
 
 	scf
@@ -365,18 +366,18 @@ doCmdDisk:
 	call SER_TX_STRING
 
 	call getLine			; Get disk number
-	jr nc,dcdkCont1
+	jr nc,_dcdkCont1
 	ld hl,badParamMsg
 	call SER_TX_LINE
 	ld a,0ffh
 	scf
 	ret
 
-dcdkCont1
+_dcdkCont1:
 	call sendCrLf
 
-	call strToNum			; Make sure it is a valid number
-	jr nc,dcdkCont2			; Yes, then continue
+	call strDecToNum		; Make sure it is a valid number
+	jr nc,_dcdkCont2		; Yes, then continue
 	ld hl,badParamMsg		; No, then tell the user and abort
 	call SER_TX_LINE
 	ld a,0ffh
@@ -384,8 +385,7 @@ dcdkCont1
 	scf				; Set carry flag as an error state
 	ret
 
-dcdkCont2
-	
+_dcdkCont2:
 	call selectDisk
 
 	scf
@@ -413,13 +413,13 @@ doCmdFormat:
 
 	call SER_RX_CHAR
 	cp 'F'				; Check for F key pressed
-	jp z, cmdFormatSD		; Go ahead and format
+	jp z, _dcftFormatSD		; Go ahead and format
 
 	scf
 	ccf
 	ret				; Otherwise we don't want to format
 
-cmdFormatSD
+_dcftFormatSD:
 	call sendCrLf			; Clear the line
 	ld hl,formatMsg
 	call SER_TX_LINE
@@ -563,7 +563,7 @@ doCmdLoad:
 ;	ld (selectMsgPtr),hl
 
 	call selectSlot			; Get slot number
-	jp c,dclBadParamQuit		; Bail out if invalid slot number
+	jp c,_dclQuit			; Bail out if invalid slot number
 
 	push af
 	ld a,c				; Update slot number
@@ -580,7 +580,7 @@ doCmdLoad:
 	or a
 	sbc hl,de
 	add hl,de
-	jr nz,lfValid			; Continue if valid load address
+	jr nz,_dclValid			; Continue if valid load address
 
 	ld hl,noFileMsg			; Error if selecting empty slot
 	call SER_TX_LINE
@@ -589,7 +589,7 @@ doCmdLoad:
 	ccf
 	ret
 
-lfValid
+_dclValid:
 	push bc
 	push hl
 	push iy
@@ -612,7 +612,7 @@ lfValid
 	ccf
 	ret
 
-dclBadParamQuit
+_dclQuit:
 	ld hl,badParamMsg		; Display bad parameter message...
 	call SER_TX_LINE
 
@@ -653,7 +653,7 @@ doCmdRen:
 	ld (selectMsgPtr),hl
 
 	call selectSlot			; Get slot number
-	jp c,dclBadParamQuit		; Bail out if invalid slot number
+	jp c,_dclQuit		; Bail out if invalid slot number
 
 	ld a,c				; Update slot number
 	ld (slotNumber),a
@@ -664,13 +664,13 @@ doCmdRen:
 	call SER_TX_STRING
 
 	call getLine			; Get filename
-	jr nc,dcrCont1			; Check for valid filename length
+	jr nc,_dcrCont1			; Check for valid filename length
 	
 	scf
 	ccf
 	ret
 
-dcrCont1
+_dcrCont1:
 	push bc
 
 	ld a,c				; Get the number of chars in the string
@@ -680,10 +680,11 @@ dcrCont1
 	ld de,fileNameBuff		; Clear the file name buffer
 	ld a,' '
 	ld b,DESC_SIZE
-dcrCont2
+
+_dcrCont2:
 	ld (de),a
 	inc de
-	djnz dcrCont2
+	djnz _dcrCont2
 
 	ld de,fileNameBuff
 	pop bc
@@ -722,19 +723,23 @@ doCmdSave:
 	ld hl,7fffh
 	ld (transferEnd),hl
 
-dcsGetAddr
-	ld hl,blkStartMsg		; Get start address
+_dcsGetAddr:
+	ld hl,blkStartMsg		; Get start address message
 	call SER_TX_STRING
 
-	call getAddress
-	jr c,dcsGetAddr			; Carry indicates an error so go again
+	call getLine			; Get the address
+	call sendCrLf
+	call strHexToNum		; and covert to a number
+	jr c,_dcsGetAddr		; Carry indicates an error so go again
 	ld (transferStart),hl
 
 	ld hl,blkEndMsg			; Get end address
 	call SER_TX_STRING
 
-	call getAddress
-	jr c,dcsGetAddr			; Carry indicates an error so go again
+	call getLine			; Get the address
+	call sendCrLf
+	call strHexToNum		; and covert to a number
+	jr c,_dcsGetAddr		; Carry indicates an error so go again
 	ld (transferEnd),hl
 
 	ld hl,(transferEnd)		; Validate parameters
@@ -742,15 +747,15 @@ dcsGetAddr
 	or a				; 16-bit CP
 	sbc hl,bc
 	add hl,bc
-	jp z,dcsBadParam		; Retry if equal
-	jp c,dcsBadParam		; Retry if end<start
+	jp z,_dcsBadParam		; Retry if equal
+	jp c,_dcsBadParam		; Retry if end<start
 
 	sbc hl,bc			; Fix up subtraction
 ;	inc hl				; +1 start address itself counts
 	ld (transferLength),hl		; Parameters set
 
 	call selectSlot			; Prompt for and get slot number
-	jp c,dcsBadParamQuit
+	jp c,_dcsQuit
 
 	ld a,c				; Update slot number
 	ld (slotNumber),a
@@ -761,13 +766,13 @@ dcsGetAddr
 	call SER_TX_STRING
 
 	call getLine			; Get filename
-	jr nc,dcsCont1			; Check for valid filename
+	jr nc,_dcsCont1			; Check for valid filename
 
 	call sendCrLf
 
-	jp dcsBadParamQuit
+	jp _dcsQuit
 
-dcsCont1
+_dcsCont1:
 	push bc
 
 	ld a,c				; Get the number of chars in the string
@@ -778,10 +783,10 @@ dcsCont1
 	ld a,' '
 	ld b,DESC_SIZE
 
-dcsCont2
+_dcsCont2:
 	ld (de),a
 	inc de
-	djnz dcsCont2
+	djnz _dcsCont2
 
 	ld de,fileNameBuff
 	pop bc
@@ -807,7 +812,7 @@ dcsCont2
 	ccf
 	ret				; Successful command execution
 
-dcsBadParamQuit
+_dcsQuit:
 	ld hl,badParamMsg		; Display bad parameter message...
 	call SER_TX_LINE
 
@@ -815,11 +820,11 @@ dcsBadParamQuit
 	ccf
 	ret				; ...and quit
 
-dcsBadParam
+_dcsBadParam:
 	ld hl,badParamMsg		; Display bad parameter...
 	call SER_TX_LINE
 
-	jp cmdSave			; ...and try again
+	jp doCmdSave			; ...and try again
 
 ; ----------------------------------------------------------------------------
 ; doCmdSector
@@ -837,18 +842,18 @@ doCmdSector:
 	call SER_TX_STRING
 
 	call getLine			; Get sector number
-	jr nc,dcstCont1
+	jr nc,_dcstCont1
 	ld hl,badParamMsg
 	call SER_TX_LINE
 	ld a,0ffh
 	scf
 	ret
 
-dcstCont1
+_dcstCont1:
 	call sendCrLf
 
-	call strToNum			; Make sure it is a valid number
-	jr nc,dcstCont2			; Yes, then continue
+	call strDecToNum		; Make sure it is a valid number
+	jr nc,_dcstCont2		; Yes, then continue
 	ld hl,badParamMsg		; No, then tell the user and abort
 	call SER_TX_LINE
 	ld a,0ffh
@@ -856,8 +861,7 @@ dcstCont1
 	scf				; Set carry flag as an error state
 	ret
 
-dcstCont2
-	
+_dcstCont2:
 	call showSector
 
 	scf
@@ -912,7 +916,7 @@ getAddress:
 	ld de,paramStrBuff
 	ld b,4
 
-gaLoop
+_gaLoop:
 	call SER_RX_CHAR			; Get command
 
 	ld (de),a
@@ -920,7 +924,7 @@ gaLoop
 
 	call SER_TX_CHAR			; Digit found, echo digit
 
-	djnz gaLoop
+	djnz _gaLoop
 
 	call sendCrLf
 
@@ -1015,22 +1019,22 @@ invalidChar
 getLine:
 	ld hl,cmdLineBuff		; Point HL to the command line buffer
 
-glLoop
+_glLoop:
 	push hl
 	call SER_RX_CHAR		; Get character from the serial port
 	pop hl
 
 	cp 8				; Backspace
-	jp z,glBackspace
+	jp z,_glBackspace
 
 	cp 10				; Line feed
-	jp z,glStringOK
+	jp z,_glStringOK
 
 	cp 13				; Carriage return
-	jp z,glStringOK
+	jp z,_glStringOK
 
 	cp 27				; Escape key
-	jp z,glEscape
+	jp z,_glEscape
 
 	push af				; Display the character
 	call SER_TX_CHAR
@@ -1038,16 +1042,16 @@ glLoop
 
 	ld (hl),a			; Store the character
 	inc hl
-	jr glLoop
+	jr _glLoop
 
-glBackspace
+_glBackspace:
 	push hl
 	ld de,cmdLineBuff
 	sbc hl,de
 	ld a,l
 	pop hl
 	or a
-	jr z,glLoop
+	jr z,_glLoop
 
 	ld a,8				; Erase the character
 	call SER_TX_CHAR
@@ -1060,9 +1064,9 @@ glBackspace
 
 	ld (hl),0			; Insert a null character
 	dec hl
-	jr glLoop
+	jr _glLoop
 
-glStringOK
+_glStringOK:
 	ld (hl),0			; Null terminate the string
 
 	ld bc,cmdLineBuff
@@ -1074,13 +1078,13 @@ glStringOK
 
 	ld a,c				; Check for empty string
 	and a
-	jr z,glEscape
+	jr z,_glEscape
 
 	scf
 	ccf				; Indicate successful input
 	ret
 
-glEscape
+_glEscape:
 	ld bc,0				; Clear character count
 	ld (hl),0			; Null terminate empty string
 
@@ -1102,16 +1106,16 @@ selectSlot:
 	call SER_TX_STRING
 	
 	call getLine			; Get slot number
-	jr nc,ssCont
+	jr nc,_ssCont
 	ld hl,badParamMsg
 	call SER_TX_LINE
 	ld a,0ffh
 	scf
 	ret
 
-ssCont
-	call strToNum			; Make sure it is a valid number
-	jr nc,ssCont1			; Yes, then continue
+_ssCont:
+	call strDecToNum		; Make sure it is a valid number
+	jr nc,_ssCont1			; Yes, then continue
 	ld hl,badParamMsg		; No, then tell the user and abort
 	call SER_TX_LINE
 	ld a,0ffh
@@ -1119,11 +1123,11 @@ ssCont
 	scf				; Set carry flag as an error state
 	ret
 
-ssCont1
+_ssCont1:
 	push bc
 	ld a,c				; Validate slot number
 	cp 128				; Check if greater than 127
-	jr c,ssCont2			; No, then continue
+	jr c,_ssCont2			; No, then continue
 	ld hl,badParamMsg		; Yes, then tell the user and abort
 	call SER_TX_LINE
 	ld a,0ffh
@@ -1132,7 +1136,7 @@ ssCont1
 	scf				; Set carry flag as an error state
 	ret
 	
-ssCont2
+_ssCont2:
 	ld hl,64			; Get first FCB into buffer
 	and 0F8h			; Determine the sector offset
 	srl a
@@ -1205,29 +1209,29 @@ showSector:
 	ld hl,cmdLineBuff
 	ld iy,sdBuff			; Pointer to the sector data
 
-ssLoop
+_ssLoop:
 	ld a,e				; Check to see if 16th byte
 	and 0fh
-	jr z,ssLoop2
+	jr z,_ssLoop2
 
 	ld a,e				; Check to see if 8th byte
 	and 07h
-	jr nz,ssLoop1
+	jr nz,_ssLoop1
 
 	ld hl,(lineOffset)
 	ld (hl),' '			; Print an extra space before the hex value
 	inc hl
 	ld (lineOffset),hl
 	
-ssLoop1
+_ssLoop1:
 	ld hl,(lineOffset)
 	ld (hl),' '			; Print a space before the hex value
 	inc hl
 	ld (lineOffset),hl
 	
-	jr ssLoop3
+	jr _ssLoop3
 
-ssLoop2					; Routine looks at beginning of new line
+_ssLoop2:				; Routine looks at beginning of new line
 	ld hl,cmdLineBuff		; Tidy up the tail of the current line
 	ld a,74
 	ld b,0
@@ -1269,7 +1273,7 @@ ssLoop2					; Routine looks at beginning of new line
 	ld (lineOffset),hl
 	ld de,(sectorOffset)		; Keep offset in sync
 
-ssLoop3
+_ssLoop3:
 	ld a,(iy)			; Convert the current value to ASCII hex
 	ld de,wordStrBuff
 	call aToString
@@ -1286,16 +1290,16 @@ ssLoop3
 
 	ld a,(iy)			; Convert the current value to ASCII char
 	cp 20				; ASCII printable?, ' ' and up to...
-	jr nc,ssLoop4
+	jr nc,_ssLoop4
 	ld a,'.'			; Not an ASCII printable char, change to '.'
-	jr ssLoop5
+	jr _ssLoop5
 
-ssLoop4
+_ssLoop4:
 	cp 127				; ...end of ASCII printable chars
-	jr c,ssLoop5
+	jr c,_ssLoop5
 	ld a,'.'			; Not an ASCII printable char, change to '.'
 
-ssLoop5
+_ssLoop5:
 	push af				; Calculate where to put the char at the end
 	ld de,(sectorOffset)		; of the line
 	ld a,e
@@ -1309,7 +1313,7 @@ ssLoop5
 	pop af
 	ld (hl),a			; Write the char to the line
 
-ssLoop6
+_ssLoop6:
 	inc iy
 	ld de,(sectorOffset)
 	inc de
@@ -1318,10 +1322,10 @@ ssLoop6
 	sbc hl,de			; End of the sector?
 	ld a,h
 	or l
-	jr z,ssEnd
-	jp ssLoop
+	jr z,_ssEnd
+	jp _ssLoop
 
-ssEnd
+_ssEnd:
 	ld hl,cmdLineBuff
 	call SER_TX_LINE
 
@@ -1385,302 +1389,16 @@ showTimeStamp:
 ; ----------------------------------------------------------------------------
 validateFormat:
 	call isFormatted		; Is the SD card formatted?
-	jr nc,vfOK
+	jr nc,_vfOK
 	call sdErrMsg			; Display error message
 
 	scf
 	ret				; Return error
 
-vfOK
+_vfOK:
 	scf
 	ccf
 	ret				; Return success
-
-; ----------------------------------------------------------------------------
-; strToNum
-; Reads the decimal string pointed to by HL and returns the number in BC.
-;
-; Input:	HL -- Pointer to null terminated ASCII string
-; Output:	BC -- Number represented by ASCII string
-;		Carry flag is set on error and BC set to 0
-; Destroys:	A, BC, HL
-; ----------------------------------------------------------------------------
-strToNum:
-	push hl
-	ld de,0
-
-stnLoop
-	ld a,(hl)			; determine the end of the string
-	cp 0				; Check for the null character
-	jr z,stnConvert			; End of string found
-	inc hl				; Otherwise go to the next character
-	inc d
-	inc e
-	ld a,e
-	cp 6
-	jr nc,stnInvalid
-	jr stnLoop
-
-stnConvert
-	ld bc,0				; take the LSD and add it to BC
-	dec hl
-	ld a,(hl)
-	push de
-	call asciiDecToNum
-	jr c,stnInvalid
-
-	ld c,a
-	pop de
-	dec e
-	jr z,stnDone
-
-stnDigit
-	dec hl				; take the next digit x10 add to BC
-	ld a,(hl)
-	push de
-	call asciiDecToNum
-
-	jr c,stnInvalid
-
-	pop de
-	push hl
-	ld h,0
-	ld l,a
-	push de
-stnMult
-	ld a,d
-	cp e
-	jr z,stnMultSkip
-	call hlX10
-	dec d
-	jr stnMult
-
-stnMultSkip
-	add hl,bc
-	push hl
-	pop bc
-	pop de
-	pop hl
-
-	dec e
-	jr z,stnDone
-
-	jr stnDigit
-
-stnInvalid
-	pop hl
-	ld bc,0				; Clear the number
-	scf				; Set carry flag as error
-	ret
-
-stnDone
-	pop hl
-	scf
-	ccf				; Clear carry flag as success
-	ret
-
-; ----------------------------------------------------------------------------
-; asciiDecToNum
-; Reads the ASCII digit in A and converts it.
-;
-; Input:	A -- Single ASCII digit
-; Output:	A -- Number represented by ASCII character
-;		Carry flag is set on error and A set to 0
-; Destroys:	A
-; ----------------------------------------------------------------------------
-
-asciiDecToNum:
-	ld de,0				; Clear the number
-
-	sub '0'				; Test for ASCII decimal digit
-	cp 10
-	jr nc,adtnInvalid		; Error if >= 10
-
-	scf
-	ccf				; Clear the carry flag as success
-	ret
-
-adtnInvalid
-	ld a,0				; Return A as 0
-	scf				; Set carry flag as error
-	ret
-
-; ----------------------------------------------------------------------------
-; hlX10
-; Multiplies HL x10.
-;
-; Input:	HL -- Number to be multiplied by 10
-; Output:	HL -- Number multiplied by 10
-; Destroys:	BC, HL
-; ----------------------------------------------------------------------------
-hlX10:
-	push bc
-
-	push hl
-	pop bc
-
-	add hl,hl
-	add hl,hl
-	add hl,hl
-	add hl,bc
-	add hl,bc
-
-	pop bc
-
-	ret
-
-; ----------------------------------------------------------------------------
-; aToString
-; Converts A to ASCII string
-;
-; Input:	A -- Number to convert
-;		DE -- Pointer to destination string
-; Output:	DE -- Pointer to byte after the string
-; Destroys:	A
-; ----------------------------------------------------------------------------
-aToString:
-	push af
-	and 0f0h			; Mask off high order nibble
-	sra a				; Move to the lower nibble
-	sra a
-	sra a
-	sra a
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
-
-	pop af
-	and 0fh				; Mask off low order nibble
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
-
-	ret
-
-; ----------------------------------------------------------------------------
-; aToDecString
-; Converts A to decimal ASCII string
-;
-; Input:	A -- Number to convert
-;		DE -- Pointer to destination string
-; Output:	DE -- Pointer to byte after the string
-; Destroys:	A
-; ----------------------------------------------------------------------------
-aToDecString:
-	ld l,a
-	ld a,0
-	ld h,a
-
-	ld bc,-100
-	call atds1
-	ld c,-10
-	call atds1
-	ld c,-1
-
-atds1
-	ld a,'0'-1
-
-atds2
-	inc a
-	add hl,bc
-	jr c,atds2
-	sbc hl,bc
-
-atds3
-	ld (de),a
-	inc de
-	ld a,' '
-	ld (de),a
-	ret
-
-; ----------------------------------------------------------------------------
-; hlToString
-; Converts HL to ASCII string
-;
-; Input:	HL -- Number to convert
-;		DE -- Pointer to destination string
-; Output:	DE -- Pointer to byte after the string
-; Destroys:	A
-; ----------------------------------------------------------------------------
-hlToString:
-	ld a,h				; Get the high order byte
-	and 0f0h			; Mask off high order nibble
-	sra a				; Move to the lower nibble
-	sra a
-	sra a
-	sra a
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
-
-	ld a,h				; Get the high order byte
-	and 0fh				; Mask off low order nibble
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
-
-	ld a,l				; Get the low order byte
-	and 0f0h			; Mask off high order nibble
-	sra a				; Move to the lower nibble
-	sra a
-	sra a
-	sra a
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
-
-	ld a,l				; Get the low order byte
-	and 0fh				; Mask off low order nibble
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
-
-	ret
-
-; ----------------------------------------------------------------------------
-; aToNibble
-; Converts A to ASCII nibble
-;
-; Input:	A -- Number to convert
-; Output:	A -- ASCII char equivalent
-; Destroys:	None
-; ----------------------------------------------------------------------------
-aToNibble:	
-	and 0fh				; Just in case...
-	add a,'0'			; If we have a digit we are done here.
-	cp '9' + 1			; Is the result > 9?
-	jr c, aToNibble_1
-	add a,'A'-'0'-$a		; Take care of A-F
-
-aToNibble_1
-	ret
-
-; ----------------------------------------------------------------------------
-; stringCompare
-; Compares two strings
-;
-; Input:	DE -- Pointer to string 1
-;		HL -- Pointer to string 2
-;		B -- Number of bytes to compare
-; Output:	Clears carry flag on success, sets carry flag on fail
-; Destroys:	A, BC, DE, HL
-; ----------------------------------------------------------------------------
-stringCompare:
-	ld a,(de)			; Get string 2 char
-	sub (hl)			; Get string 1 char and subtract it
-	cp 0
-	jr nz,scFail			; They are not the same...
-	inc de				; Get ready for next char
-	inc hl
-	djnz stringCompare		; More chars to process...
-
-	scf
-	ccf
-	ret
-
-scFail
-	scf
-	ret
 
 ; ----------------------------------------------------------------------------
 ; beep
