@@ -1,7 +1,7 @@
 ; ----------------------------------------------------------------------------
 ; MinSD.asm
-; Version: 1.0
-; Last updated: 27/07/2024
+; Version: 1.1
+; Last updated: 31/07/2024
 ;
 ; Minimal SD Reader for the MPF-1 trainer.
 ; This is a cut down version of MinOS with just enough code to load a memory
@@ -393,7 +393,7 @@ s7LoadMsg	.db 23h			; "LoAd-n"
 ; ----------------------------------------------------------------------------
 ; Program variables
 ; ----------------------------------------------------------------------------
-		.org 0f000H
+		.org 0fd00H
 
 sdBuff		.block 512+2		; 512b + CRC16
 

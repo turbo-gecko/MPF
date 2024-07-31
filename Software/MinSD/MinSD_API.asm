@@ -20,7 +20,7 @@
 ; INCLUDE libraries
 ; ----------------------------------------------------------------------------
 
-#include	"spi_library.asm"
+;#include	"spi_library.asm"
 
 ; ============================================================================
 ; Api calls
@@ -947,8 +947,109 @@ waitDone
 	ret
 
 ; ----------------------------------------------------------------------------
+; SPI Routines
+; ----------------------------------------------------------------------------
 
-;#include mon3_includes.asm
+; SPI port bits out
+;
+; bit 0 - MOSI
+; bit 1 - CLK
+; bit 2 - CS1
+;
+; SPI port bits in
+;
+; bit 6 - Card Detect (not used)
+; bit 7 - MISO
+;
+; ----------------------------------------------------------------------------
+; SPI initialization code
+; call once at start of code, and again to return SPI to idle
+;
+; idle state == xxxx x101  ===  CS high, CLK low, MOSI high
+; ----------------------------------------------------------------------------
+spiInit:
+	push af
+	ld a,SPI_IDLE	; Set idle state
+	out (SPI_PORT),a
+	pop af
+	ret
+
+; ----------------------------------------------------------------------------
+; Routine to transmit one byte to the SPI bus
+;
+; C = data byte to write
+;
+; no results returned, no registers modified
+; ----------------------------------------------------------------------------
+spiWrb:
+	push af
+	push bc
+	ld b,8			; 8 BITS
+
+wbit
+	ld a,SPI_IDLE		; starting point
+	and SPI_CS1		; add in the CS pin
+	bit 7,c
+	jr nz, no
+	res 0,a
+
+no
+	out (SPI_PORT),a		; set data bit
+;	set 1,a			; set CLK
+	or 02h
+	out (SPI_PORT),a
+	nop
+;	res 1,a			; clear CLK
+	and 0fdh
+	out (SPI_PORT),a
+	rlc c			; next bit
+	djnz wbit
+
+	pop bc
+	pop af
+	ret
+
+; ----------------------------------------------------------------------------
+; Routine to read one byte from the SPI bus
+;
+; returns result in A
+; no other registers modified
+; ----------------------------------------------------------------------------
+spiRdb:
+	push bc
+	push de
+
+	ld e,0		; result
+	ld b,8		; 8 bits
+
+rbit
+	ld a,SPI_IDLE
+	and SPI_CS1	; CS bit
+
+	out (SPI_PORT),a	; set CS
+	nop
+
+	or 02h
+;	set 1,a		; set CLK
+	out (SPI_PORT),a
+
+	ld c,a		; backup a
+	in a,(SPI_PORT)	; bit d7
+	rla		; bit 7 -> carry
+	rl e		; carry -> E bit 0
+	ld a,c		; restore a
+
+	and 0fdh
+;	res 1,a		; clear CLK
+	out (SPI_PORT),a
+
+	djnz rbit
+
+	ld a,e
+
+	pop de
+	pop bc
+	ret
 
 ; ----------------------------------------------------------------------------
 ; Constants
@@ -987,6 +1088,11 @@ DIR_END		.equ 38
 ERR_NO_CARD	.equ 1
 ERR_NO_SDHC	.equ 2
 ERR_NO_FORMAT	.equ 3
+
+; SPI
+SPI_PORT	.equ 0fdh	; IO port our SPI "controller" lives on
+SPI_IDLE	.equ 05h	; Idle state
+SPI_CS1		.equ 0fbh	; CS line
 
 ; ----------------------------------------------------------------------------
 ; Data and variables
