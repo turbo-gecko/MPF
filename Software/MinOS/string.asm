@@ -158,6 +158,9 @@ aToString:
 	ld (de),a			; Update the string
 	inc de
 
+	ld a,0
+	ld (de),a
+
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -201,6 +204,9 @@ hlToString:
 	call aToNibble			; Convert to ASCII
 	ld (de),a			; Update the string
 	inc de
+
+	ld a,0
+	ld (de),a
 
 	ret
 
@@ -398,3 +404,27 @@ _sthDone:
 	scf
 	ccf				; Clear carry flag as success
 	ret
+
+; ----------------------------------------------------------------------------
+; strSize
+; Returns number of chars in a string, excluding the null
+;
+; Input:	HL -- Pointer to string
+; Output:	BC -- Number of bytes in the string
+; Destroys:	A, BC, HL
+; ----------------------------------------------------------------------------
+strSize:
+	ld bc,0				; Clear the byte counter
+
+_sszLoop:
+	ld a,(hl)			; Get string character
+	cp 0
+	jr z,_sszDone			; Is it a null?
+	inc hl				; Set up for next character in the string
+	inc bc				; Increment the byte count
+	jr _sszLoop
+
+_sszDone:
+	scf
+	ret
+

@@ -1657,6 +1657,46 @@ waitDone
 	ret
 
 ; ----------------------------------------------------------------------------
+; writeVolLabel
+; Writes a new volume label to the current disk.
+;
+; Input:	HL -- Pointer to null terminated disk volume label.
+; Output:	None
+; Destroys:	A, BC, DE, HL
+; ----------------------------------------------------------------------------
+writeVolLabel:
+	push hl
+	ld bc,00h
+	ld (currSector),bc		; Save the sector number
+	call readSdSector		; Go read the sector
+
+	ld hl,sdBuff+VOL_LABEL_OFS	; Clear the current volume label
+	ld a,' '
+	ld (hl),a
+	ld de,sdBuff+VOL_LABEL_OFS+1
+	ld bc,VOL_LABEL_SIZE-1
+	ldir
+
+	pop hl
+	ld de,sdBuff+VOL_LABEL_OFS	; Start of volume label
+	ld bc,VOL_LABEL_SIZE		; Maximum number of characters to copy
+
+_wvlLoop:
+	ld a,(hl)
+	cp 0h				; Check for the terminating null
+	jr z,_wvlDone
+	ld (de),a			; Store the character
+	inc hl
+	inc de
+	djnz _wvlLoop			; Get the next character
+
+_wvlDone:
+	ld bc,00h
+	ld (currSector),bc		; Write MBR sector
+	call writeSdSector
+	ret				; and return.
+
+; ----------------------------------------------------------------------------
 ; Error Handling Routines
 ; ----------------------------------------------------------------------------
 
@@ -1841,6 +1881,8 @@ SPI_PORT	.equ 0fdh	; IO port our SPI "controller" lives on
 SPI_IDLE	.equ 05h	; Idle state
 SPI_CS1		.equ 0fbh	; CS line
 
+VOL_LABEL_OFS	.equ 6		; Volume label offset in the MBR
+VOL_LABEL_SIZE	.equ 20		; Maximum size of teh volume label
 
 ; ----------------------------------------------------------------------------
 ; Data and variables

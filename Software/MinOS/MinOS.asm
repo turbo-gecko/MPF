@@ -1,7 +1,7 @@
 ; ----------------------------------------------------------------------------
 ; MinOS.asm
-; Version: 0.3
-; Last updated: 21/07/2024
+; Version: 0.4
+; Last updated: 28/07/2024
 ;
 ; Minimal OS for the MPF-1 trainer.
 ;
@@ -51,7 +51,7 @@ mainEscape:
 ; ----------------------------
 ; App version info
 ; ----------------------------
-swVerMsg	.db "Version 0.2",0
+swVerMsg	.db "Version 0.4",0
 swInfoMsg	.db "Prototype build",0
 
 ; ----------------------------------------------------------------------------
@@ -161,6 +161,12 @@ commandMenu:
 	ld b,4
 	call strCompare
 	jp nc,doCmdLoad
+
+	ld hl,cmdLineBuff		; 'mem' command
+	ld de,cmdMem
+	ld b,3
+	call strCompare
+	jp nc,doCmdMem
 
 	ld hl,cmdLineBuff		; 'quit' command
 	ld de,cmdQuit
@@ -289,7 +295,8 @@ doCmdDir:
 	call validateFormat
 	ret c				; Bail if bad SD
 
-	call doCmdVolume
+	call getVolLabel		; Display the volume label
+	call SER_TX_LINE
 
 	ld hl,dirHeaderMsg		; Display the directory header line
 	call SER_TX_LINE
@@ -621,6 +628,78 @@ _dclQuit:
 	ret				; ...and quit
 
 ; ----------------------------------------------------------------------------
+; doCmdMem
+; Prompts for a memory location and displays the hex dump for 512 bytes from
+; that location
+;
+; Input:	None
+; Output:	None
+; Destroys:	A, BC, HL
+; ----------------------------------------------------------------------------
+doCmdMem:
+	ld hl,memMsg
+	call SER_TX_STRING
+
+	call getLine			; Get memory location
+	jr nc,_dcmCont1
+	ld hl,badParamMsg
+	call SER_TX_LINE
+	ld a,0ffh
+	jr _dcmError
+
+_dcmCont1:
+	call sendCrLf
+
+	call strHexToNum		; Make sure it is valid memory
+	jr nc,_dcmCont2			; Yes, then continue
+	ld hl,badParamMsg		; No, then tell the user and abort
+	call SER_TX_LINE
+	ld a,0ffh
+	jr _dcmError
+
+_dcmCont2:
+	push bc				; Save memory location
+
+	ld hl,memBlockMsg
+	call SER_TX_STRING
+
+	call getLine			; Get block size
+	jr nc,_dcmCont3
+	ld hl,badParamMsg
+	call SER_TX_LINE
+	ld a,0ffh
+	jr _dcmError
+
+_dcmCont3:
+	call sendCrLf
+
+	call strHexToNum		; Make sure it is a valid block size
+	jr nc,_dcmCont4			; Yes, then continue
+	ld hl,badParamMsg		; No, then tell the user and abort
+	call SER_TX_LINE
+	ld a,0ffh
+	jr _dcmError
+
+_dcmCont4:
+	ld a,b
+	add a,c
+	cp 0
+	jr z,_dcmError
+
+	pop iy
+	call showBlock
+
+	scf
+	ccf
+	ret
+
+_dcmError:
+	pop iy
+
+	scf				; Set carry flag as an error state
+	ret
+
+; ----------------------------------------------------------------------------
 ; doCmdQuit
 ; Quits the program!
 ;
@@ -898,7 +977,16 @@ doCmdVersion:
 doCmdVolume:
 	call getVolLabel		; Get the volume label
 	call SER_TX_LINE
-	
+
+	ld hl,getNewVolMsg		; Prompt for a new volume label
+	call SER_TX_STRING
+
+	call getLine
+	ret c				; Return on error
+	call sendCrLf
+
+	call writeVolLabel		; Write the new label
+
 	scf
 	ccf
 	ret				; Successful command execution
@@ -1011,9 +1099,10 @@ invalidChar
 ; The returned string will not have the CR/LF or ESC as it will be replaced
 ; with a null character to terminate the string.
 ;
-; Input:
+; Input:	None
 ; Output:	BC -- Number of characters entered, not including terminators
 ;		HL -- Pointer to null terminated ASCII string
+;		Carry flag set on <Esc> key press or empty string
 ; Destroys:	A, BC, HL
 ; ----------------------------------------------------------------------------
 getLine:
@@ -1186,52 +1275,50 @@ sendCursor:
 	ret
 
 ; ----------------------------------------------------------------------------
-; showSector
-; Displays a 512 byte sector
+; showBlock
+; Displays a 512 byte block
 ;
-; Input:	BC -- Sector number
+; Input:	BC - Size of the block to display
+;		IY -- Pointer to 512 byte block of memory
 ; Output:	None
-; Destroys:	A, BC, DE, HL
+; Destroys:	A, BC, DE, HL, IY
 ; ----------------------------------------------------------------------------
-showSector:
-	ld (currSector),bc		; Save the sector number
+showBlock:
+	ld (blockSize),bc		; Store the block size
 
 	ld hl,sectorHdr			; Set up the output line buffer with
-	ld de,cmdLineBuff		; the sector header
+	ld de,cmdLineBuff		; the header
 	ld bc,74
 	ldir
 
-	call readSdSector		; Go read the sector
-
 	ld de,0				; Initialise vars
-	ld (sectorOffset),de
+	ld (blockOffset),de
 	ld (lineOffset),de
 	ld hl,cmdLineBuff
-	ld iy,sdBuff			; Pointer to the sector data
 
-_ssLoop:
+_sbkLoop:
 	ld a,e				; Check to see if 16th byte
 	and 0fh
-	jr z,_ssLoop2
+	jr z,_sbkLoop2
 
 	ld a,e				; Check to see if 8th byte
 	and 07h
-	jr nz,_ssLoop1
+	jr nz,_sbkLoop1
 
 	ld hl,(lineOffset)
 	ld (hl),' '			; Print an extra space before the hex value
 	inc hl
 	ld (lineOffset),hl
 	
-_ssLoop1:
+_sbkLoop1:
 	ld hl,(lineOffset)
 	ld (hl),' '			; Print a space before the hex value
 	inc hl
 	ld (lineOffset),hl
 	
-	jr _ssLoop3
+	jr _sbkLoop3
 
-_ssLoop2:				; Routine looks at beginning of new line
+_sbkLoop2:				; Routine looks at beginning of new line
 	ld hl,cmdLineBuff		; Tidy up the tail of the current line
 	ld a,74
 	ld b,0
@@ -1242,12 +1329,18 @@ _ssLoop2:				; Routine looks at beginning of new line
 	ld hl,cmdLineBuff
 	call SER_TX_LINE		; Print the line
 
+	ld hl,cmdLineBuff		; Clear the line... <-debug
+	ld (hl),' '
+	ld de,cmdLineBuff+1
+	ld bc,73
+	ldir
+
 	ld hl,cmdLineBuff		; Reset HL to beginning of new output line
-	ld (hl),'-'
+	ld (hl),'+'
 	inc hl
 	ld (lineOffset),hl
 
-	ld hl,(sectorOffset)		; Get the current sector offset
+	ld hl,(blockOffset)		; Get the current block offset
 	ld de,wordStrBuff		; Temporary buffer
 	call hlToString			; Convert to string
 
@@ -1271,9 +1364,8 @@ _ssLoop2:				; Routine looks at beginning of new line
 	inc hl
 
 	ld (lineOffset),hl
-	ld de,(sectorOffset)		; Keep offset in sync
 
-_ssLoop3:
+_sbkLoop3:
 	ld a,(iy)			; Convert the current value to ASCII hex
 	ld de,wordStrBuff
 	call aToString
@@ -1289,19 +1381,19 @@ _ssLoop3:
 	ld (lineOffset),hl
 
 	ld a,(iy)			; Convert the current value to ASCII char
-	cp 20				; ASCII printable?, ' ' and up to...
-	jr nc,_ssLoop4
+	cp 20h				; ASCII printable?, ' ' and up to...
+	jr nc,_sbkLoop4
 	ld a,'.'			; Not an ASCII printable char, change to '.'
-	jr _ssLoop5
+	jr _sbkLoop5
 
-_ssLoop4:
-	cp 127				; ...end of ASCII printable chars
-	jr c,_ssLoop5
+_sbkLoop4:
+	cp 7fh				; ...end of ASCII printable chars
+	jr c,_sbkLoop5
 	ld a,'.'			; Not an ASCII printable char, change to '.'
 
-_ssLoop5:
+_sbkLoop5:
 	push af				; Calculate where to put the char at the end
-	ld de,(sectorOffset)		; of the line
+	ld de,(blockOffset)		; of the line
 	ld a,e
 	and 0fh
 	add a,58
@@ -1313,19 +1405,25 @@ _ssLoop5:
 	pop af
 	ld (hl),a			; Write the char to the line
 
-_ssLoop6:
+_sbkLoop6:
 	inc iy
-	ld de,(sectorOffset)
-	inc de
-	ld (sectorOffset),de
-	ld hl,512
-	sbc hl,de			; End of the sector?
-	ld a,h
-	or l
-	jr z,_ssEnd
-	jp _ssLoop
+	
+	; *** This code doesn't do anything other than prevent a subtle bug when displaying
+	; the last byte in the block. Removing this code brings the bug back !?! ***
+	ld a,0fh
+	call aToNibble
+	; *** ----------
 
-_ssEnd:
+	ld de,(blockOffset)
+	inc de
+	ld (blockOffset),de
+
+	ld hl,(blockSize)
+	sbc hl,de			; End of the block?
+	jr z,_sbkEnd
+	jp _sbkLoop
+
+_sbkEnd:
 	ld hl,cmdLineBuff
 	call SER_TX_LINE
 
@@ -1333,6 +1431,25 @@ _ssEnd:
 
 	scf
 	ccf
+	ret
+
+; ----------------------------------------------------------------------------
+; showSector
+; Displays a 512 byte sector
+;
+; Input:	BC -- Sector number
+; Output:	None
+; Destroys:	A, BC, HL, IY
+; ----------------------------------------------------------------------------
+showSector:
+	ld (currSector),bc		; Save the sector number
+
+	call readSdSector		; Go read the sector
+
+	ld iy,sdBuff			; Pointer to the sector data
+	ld bc,512			; Size of a disk block
+	call showBlock
+
 	ret
 
 ; ----------------------------------------------------------------------------

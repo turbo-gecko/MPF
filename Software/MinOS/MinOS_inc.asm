@@ -37,13 +37,14 @@ helpMsg		.db "Command help",13,10
 		.db "format - Format disk on SD card",13,10
 		.db "hwinfo - Displays SD card hardware information",13,10
 		.db "load   - Load slot from the SD card",13,10
+		.db "mem    - Display the contents of a block of memory",13,10
 		.db "quit   - Quit program",13,10
 		.db "ren    - Rename a slot",13,10
 		.db "save   - Save memory to the SD card",13,10
 		.db "sdinfo - Displays disk information",13,10
-		.db "sector - Display the contents of a sector",13,10
+		.db "sector - Display the contents of a 512 byte SD sector",13,10
 		.db "ver    - Display version information",13,10
-		.db "vol    - Display the current disks volume label",13,10
+		.db "vol    - Update the current disks volume label",13,10
 		.db "?      - Displays this help text",13,10
 		.db 0
 
@@ -54,6 +55,7 @@ cmdFormat	.db "format",0
 cmdHwInfo	.db "hwinfo",0
 cmdSdInfo	.db "sdinfo",0
 cmdLoad		.db "load",0
+cmdMem		.db "mem",0
 cmdQuit		.db "quit",0
 cmdRen		.db "ren",0
 cmdSave		.db "save",0
@@ -86,6 +88,9 @@ cardCapacity	.db "Maximum Files : ",0
 diskLabel	.db "Disk Label    : ",0
 
 getFileNameMsg	.db "Filename      : ",0
+getNewVolMsg	.db "Enter new volume : ",0
+memMsg		.db "Mem location (hex) : ",0
+memBlockMsg	.db "Block size (hex)   : ",0
 selectExtMsg	.db "Select ext.   : ",0
 selectSlotMsg	.db "Select slot   : ",0
 sectorMsg	.db "Sector        : ",0
@@ -142,20 +147,15 @@ decWordStr	.db "     ",0
 
 crlf		.db 13,10,0
 
-s7Delete	.db "DELEtE"
-s7Disk		.db "DiSk n"
-s7Format	.db "Format"
-s7HwInfo	.db "Info H"
-s7Load		.db "LoAd  "
-s7Info		.db "Info  "
-s7Save		.db "SAvE  "
-s7SwInfo	.db "Info S"
-
 ; ----------------------------------------------------------------------------
 		.org 0e000h
 
+blockOffset	.block 2
+blockSize	.block 2
 cmdLineBuff	.block 80
+cmdLineCount	.block 1
 fileNameBuff	.block 20
+lineOffset	.block 2
 menuPos		.block 1
 menuSel		.block 1
 s7Temp		.block 6
@@ -168,9 +168,6 @@ transferPos	.block 2
 transferStart	.block 2
 wordStrBuff	.block 5
 
-cmdLineCount	.block 1
-lineOffset	.block 2
-sectorOffset	.block 2
 
 ; ----------------------------------------------------------------------------
 ; sd data
