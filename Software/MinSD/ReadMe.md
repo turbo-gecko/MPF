@@ -9,7 +9,7 @@ The main use case is for loading MinOS to enable full use of the Mem-SDS SD card
 MinSD should be burned to an EPROM and placed in the U7 ROM socket.
 It occupies less than 1K of memory in the ROM and uses less than 1K of RAM starting from F000H.
 
-The file U7-Utils.bin https://github.com/turbo-gecko/MPF/blob/main/ROM/U7-Utils.bin is a binary file ready for burning into a 2732 EPROM. The programs in the ROM include:
+The file U7-Utils.bin at https://github.com/turbo-gecko/MPF/tree/main/Software/Option%20ROM is a binary file ready for burning into a 2732 EPROM. The programs in the ROM include:
 - 2000H - Hexload program for downloading hex files to the MPF-1
 - 2222H - RAM Finder that displays the memory locations wehere RAM is found.
 - 2400H - MinSD program described on this page.
