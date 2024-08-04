@@ -31,7 +31,7 @@ asciiDecToNum:
 	ccf				; Clear the carry flag as success
 	ret
 
-_adtnInvalid:
+_adtnInvalid
 	ld a,0				; Return A as 0
 	scf				; Set carry flag as error
 	ret
@@ -53,7 +53,7 @@ asciiHexToNum:
 	jr nc,_ahtnCheckUC		; Error if >= 10
 	jr _ahtnDone
 
-_ahtnCheckUC:
+_ahtnCheckUC
 	ld a,b				; Restore ascii number
 	sub 'A'				; Test for ASCII hex digit
 	cp 6
@@ -61,19 +61,19 @@ _ahtnCheckUC:
 	add a,0ah
 	jr _ahtnDone
 
-_ahtnCheckLC:
+_ahtnCheckLC
 	ld a,b				; Restore ascii number
 	sub 'a'				; Test for ASCII hex digit
 	cp 6
 	jr nc,_ahtnInvalid		; Error if >= f
 	add a,0ah
 
-_ahtnDone:
+_ahtnDone
 	scf
 	ccf				; Clear the carry flag as success
 	ret
 
-_ahtnInvalid:
+_ahtnInvalid
 	ld a,0				; Return A as 0
 	scf				; Set carry flag as error
 	ret
@@ -98,16 +98,16 @@ aToDecString:
 	call _atds1
 	ld c,-1
 
-_atds1:
+_atds1
 	ld a,'0'-1
 
-_atds2:
+_atds2
 	inc a
 	add hl,bc
 	jr c,_atds2
 	sbc hl,bc
 
-_atds3:
+_atds3
 	ld (de),a
 	inc de
 	ld a,' '
@@ -129,7 +129,7 @@ aToNibble:
 	jr c, _atnDone
 	add a,'A'-'0'-$a		; Take care of A-F
 
-_atnDone:
+_atnDone
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -257,7 +257,7 @@ strCompare:
 	ccf
 	ret
 
-_scFail:
+_scFail
 	scf
 	ret
 
@@ -274,7 +274,7 @@ strDecToNum:
 	push hl
 	ld de,0
 
-_stnLoop:
+_stnLoop
 	ld a,(hl)			; determine the end of the string
 	cp 0				; Check for the null character
 	jr z,_stnConvert		; End of string found
@@ -286,7 +286,7 @@ _stnLoop:
 	jr nc,_stnInvalid		; then number is too big
 	jr _stnLoop
 
-_stnConvert:
+_stnConvert
 	ld bc,0				; take the LSD and add it to BC
 	dec hl
 	ld a,(hl)
@@ -299,7 +299,7 @@ _stnConvert:
 	dec e
 	jr z,_stnDone
 
-_stnDigit:
+_stnDigit
 	dec hl				; take the next digit x10 add to BC
 	ld a,(hl)
 	push de
@@ -312,7 +312,7 @@ _stnDigit:
 	ld h,0
 	ld l,a
 	push de
-_stnMult:
+_stnMult
 	ld a,d
 	cp e
 	jr z,_stnMultSkip
@@ -320,7 +320,7 @@ _stnMult:
 	dec d
 	jr _stnMult
 
-_stnMultSkip:
+_stnMultSkip
 	add hl,bc
 	push hl
 	pop bc
@@ -332,13 +332,13 @@ _stnMultSkip:
 
 	jr _stnDigit
 
-_stnInvalid:
+_stnInvalid
 	pop hl
 	ld bc,0				; Clear the number
 	scf				; Set carry flag as error
 	ret
 
-_stnDone:
+_stnDone
 	pop hl
 	scf
 	ccf				; Clear carry flag as success
@@ -358,7 +358,7 @@ strHexToNum:
 	ld de,0				; Reset loop counter
 	ld bc,0				; Clear returned value
 
-_sthLoop:
+_sthLoop
 	ld a,(hl)			; determine the end of the string
 	cp 0				; Check for the null character
 	jr z,_sthConvert		; End of string found
@@ -370,11 +370,11 @@ _sthLoop:
 	pop hl
 	jr _sthInvalid
 
-_sthConvert:
+_sthConvert
 	pop de				; Copy hex string pointer to DE
 	ld hl,0
 
-_sthAddDigits:
+_sthAddDigits
 	ld a,(de)
 	call asciiHexToNum		; Convert the char to a num
 	jr c,_sthInvalid		; If not a valid char, exit
@@ -391,13 +391,13 @@ _sthAddDigits:
 	jr z,_sthDone
 	jr _sthAddDigits
 
-_sthInvalid:
+_sthInvalid
 	ld bc,0				; Clear the number
 
 	scf				; Set carry flag as error
 	ret
 
-_sthDone:
+_sthDone
 	push hl				; Restore the number to BC
 	pop bc
 
@@ -416,7 +416,7 @@ _sthDone:
 strSize:
 	ld bc,0				; Clear the byte counter
 
-_sszLoop:
+_sszLoop
 	ld a,(hl)			; Get string character
 	cp 0
 	jr z,_sszDone			; Is it a null?
@@ -424,7 +424,7 @@ _sszLoop:
 	inc bc				; Increment the byte count
 	jr _sszLoop
 
-_sszDone:
+_sszDone
 	scf
 	ret
 

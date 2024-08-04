@@ -1,21 +1,36 @@
 ; ----------------------------------------------------------------------------
 ; MinOS.asm
-; Version: 0.4
-; Last updated: 28/07/2024
+; Version: 1.0
+; Last updated: 04/08/2024
 ;
 ; Minimal OS for the MPF-1 trainer.
 ;
 ; Requires:
-;	- Acia serial board such as the SC-139 from Small Computer Central
+;	- ACIA serial board such as the SC-139 from Small Computer Central
+;	  https://smallcomputercentral.com/sc139-serial-68b50-module-rc2014/
 ;	- 32K RAM/FRAM from 8000H to FFFFH
-;
+;	  https://smallcomputercentral.com/sc150-paged-ram-module-rc2014/
+;	  https://z80kits.com/shop/64k-ram-module/
+;	  
 ; ----------------------------------------------------------------------------
 ; Recommended memory usage:
-; - Program code at C000h for general usage
-; - Program variables at E000h
+; - Program code at E000h for general usage. Program + data will fit in less
+;   than 8k of RAM.
 ; ----------------------------------------------------------------------------
 
-	.org 0c000h			; Start of code in RAM
+; ----------------------------------------------------------------------------
+; Device specific defines. Uncomment any relevant devices as required.
+;
+; Z80 devices
+; MPF-1 - Microprofessor-1
+#define MPF-1
+;
+; Serial devices.
+#define ACIA
+;
+; ----------------------------------------------------------------------------
+
+	.org 0e000h			; Start of code in RAM
 
 	call spiInit
 
@@ -51,8 +66,8 @@ mainEscape:
 ; ----------------------------
 ; App version info
 ; ----------------------------
-swVerMsg	.db "Version 0.4",0
-swInfoMsg	.db "Prototype build",0
+swVerMsg	.db "Version 1.0.0",0
+swInfoMsg	.db "Release build",0
 
 ; ----------------------------------------------------------------------------
 ; INCLUDE libraries
@@ -60,7 +75,11 @@ swInfoMsg	.db "Prototype build",0
 
 ; ----------------------------------------------------------------------------
 #include "string.asm"
+
+#ifdef ACIA
 #include "acia.asm"
+#endif
+
 #include "MinOS_sd.asm"
 
 ; ============================================================================
