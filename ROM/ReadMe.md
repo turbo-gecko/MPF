@@ -7,5 +7,5 @@ of the ROM in my MPF-1.
 There are some minor differences in formatting and style, and some of the comments have been corrected for spelling and grammer.
 
 I have posted this asm file, as the contents of the source code has already been published in the above MPSL.pdf document. 
-If this is in violation of the wishes of the owner (Multitech Industrial Corp.) then it will be immediate removed on notification.
+If this is in violation of the wishes of the owner (Multitech Industrial Corp.) then it will be immediately removed on notification.
 Research would indicate that Flite Electronics Ltd is the current owner of the IP for the MPF-1. (flite.co.uk).
