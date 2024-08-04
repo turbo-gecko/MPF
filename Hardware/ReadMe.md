@@ -29,9 +29,9 @@ The MPF-1 comes with 2K of RAM fitted from 1800H to 1FFFH. This is insufficient 
 - Another module that I have experimented with is the Paged RAM module at https://smallcomputercentral.com/sc150-paged-ram-module-rc2014/. This can provide 32K from 8000H to FFFFH.
 
 ### High speed serial
-The main way to enter programs into the MPF-1 is very the keypad as machine code. Whilst it is how the MPF-1 was envisaged to be used, it is a painfully slow and error-prone way of transferring programs to the MPF-1.
+The main way to enter programs into the MPF-1 is via the keypad as machine code. Whilst it is how the MPF-1 was envisaged to be used, it is a painfully slow and error-prone way of transferring programs to the MPF-1.
 
-The expansion bus allows a serial card to be added and along with a hew download program, can make downloading hex files to the MPF-1 very easy and straightforward. The serial card in the photo's is an ACIA single serial card. https://smallcomputercentral.com/sc139-serial-68b50-module-rc2014/
+The expansion bus allows a serial card to be added and along with a hex download program, can make downloading hex files to the MPF-1 very easy and straightforward. The serial card in the photo's is an ACIA single serial card. https://smallcomputercentral.com/sc139-serial-68b50-module-rc2014/
 
 ### SD card storage
 The only way to load and save programs with the MPF-1 is via audio files, traditionally on tape. Whilst there are modern ways around this, it is very slow, and you would need a program to convert compiled programs to an audio format.
@@ -49,7 +49,7 @@ Burn the binary image to a 2732 EPROM and place it in the U7 socket on the MPF-1
 ### Configuration
 
 #### Serial
-The software has been designed to work with an ACIA serial card only (more in the works) at I/O address C8H
+The software has been designed to work with an ACIA serial card only (more in the works) at I/O address C8H. The hex load and SD card programs are designed to use the serial card at 115kbps with RTS/CTS handshaking. There is further information on the serial card at https://github.com/turbo-gecko/MPF/tree/main/Software/Hex%20Load
 
 #### SD Card
 The I/O card should be configured to use address FDH.
@@ -62,10 +62,17 @@ Pin configurations as follows:
 | Out |  1  | CLK         |
 | Out |  2  | CS          |
 
+Make sure that the SD card module is designed to run off 5VDC and has the 3V3 reg on board to drive the SD card correctly.
+
 ![Expansion Bus](https://github.com/turbo-gecko/MPF/blob/main/Hardware/RCBus-1.jpg)
+
+### Using the expansion cards
+Once you have everything up and running, including the U7 ROM, you can try using the hex load program at 2000H to download the 'HELPUS' example (helpus.hex) from https://github.com/turbo-gecko/MPF/tree/main/Software/Work%20Book%20Examples. Download the hex file and run the program at 1800H.
+
 
 ### Troubleshooting
 - Start with the backplane, power supply and ribbon cable first. Make sure that when both the backplane and the MPF-1 is powered on, the MPF-1 works as normal.
-- Power off the system, add the memory card, power back on and confirm the MPF-1 is working. If it isn't check
-  - The ribbon cable is connected correctly. Pin 1 on the MPF-1 is at the top, Pin 1 on the adapter card is towards the 45 degree angle on the PCB.
+- Power off the system, add the expansion cards one at a time, power back on and confirm the MPF-1 is working. If it isn't check
+  - The ribbon cable is connected correctly. Pin 1 on the MPF-1 is at the top, Pin 1 on the adapter card is towards the 45 degree angle on the PCB. (See photo for details)
+  - The expansion card is seated correctly in the backplane.
   
