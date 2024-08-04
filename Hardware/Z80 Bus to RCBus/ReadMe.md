@@ -18,6 +18,6 @@ The Kicad files used to design the board have been included, along with the z80 
 ## Info
 The PCB in the photo was made by JCLPCB with the zip file included in this folder.
 
-![Adapter Card](https://github.com/turbo-gecko/MPF/blob/main/Hardware/Z80%20Bus%20to%20RC2014/Z80%20Card%20Adapter.jpg)
+![Adapter Card](https://github.com/turbo-gecko/MPF/blob/main/Hardware/Z80%20Bus%20to%20RCBus/Z80%20Card%20Adapter.jpg)
 
 The jumper selects either the CLK or CLK2 line from the RC2014 Bus.
