@@ -2,7 +2,7 @@
 
 The MicroProfessor MPF-1 is one of the original Z80 trainers. It was a trainer that I suspect a lot of original Z80 coders first learned how to program the Z80, and it was my first introduction to programming the Z80. There is a multitude of information about the MPF-1 on the 'net so won't repeat it here.
 
-With a more recent desire to go back and re-learn the Z80, I have managed to get hold of a couple of MPF=1's to relieve the experience. In hindsight. I can see just how limited the MPF-1 actually is. Part of it's issues for me are:
+With a more recent desire to go back and re-learn the Z80, I have managed to get hold of a couple of MPF-1's to re-live the experience. In hindsight. I can see just how limited the MPF-1 actually is. Part of it's issues for me are:
 - Getting software on and off of the MPF-1 is via the keyboard or cassette tape.
 - An incredibly tiny amount of RAM. Ideal for teaching the basics but not much else.
 - Not a lot of options exist for expanding the capabilities of the MPF-1.
@@ -28,7 +28,7 @@ This provides the necessary backplane, power and connectivity to expand the MPF-
 
 ### Adding additional memory
 The MPF-1 comes with 2K of RAM fitted from 1800H to 1FFFH. This is insufficient for use with an expansion bus so the first card that should be optained is a memory expansion card with a minimum of 32K such as:
-- The 64K RAM module at https://z80kits.com/shop/64k-ram-module/. This is the module that is fitted in the backplane in the photo's. It has been configured to provide RAM from 4000H through to FFFFH, an additional 48K!
+- The 64K RAM module at https://z80kits.com/shop/64k-ram-module/ is a good choice. This is the module that is fitted in the backplane in the photo's. It has been configured to provide RAM from 4000H through to FFFFH, an additional 48K!
 - Another module that I have experimented with is the Paged RAM module at https://smallcomputercentral.com/sc150-paged-ram-module-rc2014/. This can provide 32K from 8000H to FFFFH.
 
 ### High speed serial
