@@ -7,6 +7,24 @@
 ; ----------------------------------------------------------------------------
 
 ; ----------------------------------------------------------------------------
+; Hardware driver for the SPI port
+; ----------------------------------------------------------------------------
+#ifdef GENERIC_IO
+; Generic I/O port
+#include "..\\Library\\spi_IO.asm"
+#endif
+
+#ifdef TEC-1G_IO
+; Generic I/O port
+#include "..\\Library\\spi_TEC-1G.asm"
+#endif
+
+#ifdef Z80_PIO
+; Z80 PIO
+#include "..\\Library\\spi_Z80PIO.asm"
+#endif
+
+; ----------------------------------------------------------------------------
 ; calcOffset
 ; Calculates the offset in the sector for the slots FCB and assigns to IY
 ; Requires fcbOffset to be calculated prior
@@ -194,7 +212,7 @@ deleteFile:
 
 	call writeSdSector		; Write the sector back to the SD
 	
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -316,7 +334,7 @@ _getCID2:
 	ld a,1				; Record we have got the CID info.
 	ld (sdCIDInit),a
 
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -483,7 +501,7 @@ _getR3Response:
 	pop de
 	pop bc
 
-	call spiInit
+	call spiIdle
 
 	scf				; clear carry flag on exit
 	ccf
@@ -733,13 +751,13 @@ getVolLabel:
 ; Destroys:	A, BC, DE, HL, sdBuff
 ; ----------------------------------------------------------------------------
 isFormatted:
-	call spiInit
+	call spiIdle
 
 	ld hl,0				; fetch sector
 	ld (currSector),hl
 	call readSdSector
 
-	call spiInit
+	call spiIdle
 
 	ld hl,sdFormat			; "MEMSDS"
 	ld de,sdBuff
@@ -939,7 +957,7 @@ _mBlk:
 	jr _blockFromSD
 
 _loadDone:
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -1044,7 +1062,7 @@ _rsLoop2:
 	ld a,(slotOffset)		; Restore the slot offset in the sector 
 	call getFileDir			; Get the rest of the dir contents
 
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -1127,7 +1145,7 @@ renameFile:
 
 	call writeSdSector		; Write the sector back to the SD
 	
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -1226,7 +1244,7 @@ _fcbLp:
 	cp 64+16+1
 	jr nz,_fcbLp
 
-	call spiInit
+	call spiIdle
 
 	ret				; and return
 
@@ -1247,23 +1265,7 @@ sdInit:
 	ld (sdInitRetry),a
 	
 _sdiLoop:
-	call spiInit			; Set SD interface to idle state
-
-	ld b,RESET_CLK_COUNT		; Toggle clk 80 times
-	ld a,SPI_IDLE			; Set CS and MOSI high
-
-_sdiReset:
-	out (SPI_PORT),a
-	set SD_CLK,a			; Set CLK
-	out (SPI_PORT),a
-	nop
-	res SD_CLK,a			; Clear CLK
-	out (SPI_PORT),a
-	djnz _sdiReset
-
-	ld a,SPI_IDLE			; Now turn CS off - puts SD card into SPI mode
-	and SPI_CS1
-	out (SPI_PORT),a
+	call spiReset
 
 	ld hl,spiCMD0
 	call sendSPICommand		; Should come back as 01 if card present
@@ -1371,96 +1373,6 @@ _sendSPIByte:
 	pop de
 	pop bc
 
-	ret
-
-; ----------------------------------------------------------------------------
-; SPI initialization code
-; call once at start of code, and again to return SPI to idle
-;
-; idle state == xxxx x101  ===  CS high, CLK low, MOSI high
-; ----------------------------------------------------------------------------
-spiInit:
-	push af
-	ld a,SPI_IDLE			; Set idle state
-	out (SPI_PORT),a
-	pop af
-	ret
-
-; ----------------------------------------------------------------------------
-; Routine to transmit one byte to the SPI bus
-;
-; C = data byte to write
-;
-; no results returned, no registers modified
-; ----------------------------------------------------------------------------
-spiWrb:
-	push af
-	push bc
-	ld b,8				; 8 BITS
-
-_wbit:
-	ld a,SPI_IDLE			; starting point
-	and SPI_CS1			; add in the CS pin
-	bit 7,c
-	jr nz,_no
-	res 0,a
-
-_no:
-	out (SPI_PORT),a		; set data bit
-;	set 1,a				; set CLK
-	or 02h
-	out (SPI_PORT),a
-	nop
-;	res 1,a				; clear CLK
-	and 0fdh
-	out (SPI_PORT),a
-	rlc c				; next bit
-	djnz _wbit
-
-	pop bc
-	pop af
-	ret
-
-; ----------------------------------------------------------------------------
-; Routine to read one byte from the SPI bus
-;
-; returns result in A
-; no other registers modified
-; ----------------------------------------------------------------------------
-spiRdb:
-	push bc
-	push de
-
-	ld e,0				; result
-	ld b,8				; 8 bits
-
-_rbit:
-	ld a,SPI_IDLE
-	and SPI_CS1			; CS bit
-
-	out (SPI_PORT),a		; set CS
-	nop
-
-	or 02h
-;	set 1,a				; set CLK
-	out (SPI_PORT),a
-
-	ld c,a				; backup a
-	in a,(SPI_PORT)			; bit d7
-	rla				; bit 7 -> carry
-	rl e				; carry -> E bit 0
-	ld a,c				; restore a
-
-	and 0fdh
-;	res 1,a				; clear CLK
-	out (SPI_PORT),a
-
-	djnz _rbit
-
-	ld a,e
-
-	pop de
-	pop bc
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -1642,7 +1554,7 @@ _fnDefault:
 
 	call writeSdSector		; save change
 	ret c
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -1685,7 +1597,7 @@ writeSdSector:
 	call sendSPICommand		; check command worked (=0)
 	cp 0
 	jp z,_writeSdBlock		; No error
-	call spiInit
+	call spiIdle
 
 	scf				; Set carry flag as error and return
 	ret
@@ -1788,9 +1700,6 @@ _wvlDone:
 ; ----------------------------------------------------------------------------
 ; Constants
 ; ----------------------------------------------------------------------------
-RESET_CLK_COUNT	.equ 80
-SD_INIT_RETRIES	.equ 10
-SD_CLK		.equ 1
 DESC_SIZE	.equ 20
 
 ; FCB offsets
@@ -1819,13 +1728,8 @@ DIR_START	.equ 25
 DIR_LENGTH	.equ 31
 DIR_END		.equ 38
 
-; SPI
-SPI_PORT	.equ 0fdh			; IO port our SPI "controller" lives on
-SPI_IDLE	.equ 05h			; Idle state
-SPI_CS1		.equ 0fbh			; CS line
-
 VOL_LABEL_OFS	.equ 6				; Volume label offset in the MBR
-VOL_LABEL_SIZE	.equ 20				; Maximum size of teh volume label
+VOL_LABEL_SIZE	.equ 20				; Maximum size of the volume label
 
 ; ----------------------------------------------------------------------------
 ; Data and variables

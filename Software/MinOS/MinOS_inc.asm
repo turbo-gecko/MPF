@@ -199,5 +199,5 @@ fcbFileType	.block 1
 ; ------------------------------------------------------------- ;
 ; If at this point in the listing file, the address is greater  ;
 ; than FD00H then this program will overwrite the MinSD memory  ;
-; area and will not be capatible with MinSD.                    ;
+; area and will not be compatible with MinSD.                    ;
 ; ------------------------------------------------------------- ;

@@ -1,9 +1,11 @@
 ; ----------------------------------------------------------------------------
 ; MinOS.asm
-; Version: 1.0
-; Last updated: 04/08/2024
+; Version: 1.1
+; Last updated: 11/08/2024
 ;
-; Minimal OS for the MPF-1 trainer.
+; Minimal OS for the MPF-1 trainer. It is also possible to recompile for
+; different targets and interface cards. See the device specific comments
+; below.
 ;
 ; Requires:
 ;	- ACIA serial board such as the SC-139 from Small Computer Central
@@ -20,19 +22,52 @@
 
 ; ----------------------------------------------------------------------------
 ; Device specific defines. Uncomment any relevant devices as required.
-;
-; Z80 devices
+; Only uncomment 1 of the #define's in each block.
+
+; ----------------------------
+; Block 1 - Z80 devices
 ; MPF-1 - Microprofessor-1
 #define MPF-1
-;
-; Serial devices.
+; TEC-1G - Aussie retro-modern Z80 trainer
+;#define TEC-1G
+
+; ----------------------------
+; Block 2 - Serial devices.
 #define ACIA
-;
+
+; ----------------------------
+; Block 3 - SPI devices.
+#define GENERIC_IO
+;#define TEC-1G_IO
+;#define Z80_PIO
+
 ; ----------------------------------------------------------------------------
+; Choose the appropriate program start point in memory
+#ifdef MPF-1
+CODE_START	.equ	0e000h		; Requires the upper 32K RAM expansion
+#endif
 
-	.org 0e000h			; Start of code in RAM
+#ifdef TEC-1G
+CODE_START	.equ	0a000h		; Requires RAM/FRAM in the 'Expand'
+					; socket 
+#endif
 
-	call spiInit
+; ----------------------------------------------------------------------------
+; ### Program Start ###
+; ----------------------------------------------------------------------------
+	.org CODE_START			; Start of code in RAM
+
+	jp mainStart			; Skip over version info
+
+; ----------------------------
+; App version info
+; ----------------------------
+swVerMsg	.db "Version 1.1.0",0
+swInfoMsg	.db "Release build",0
+
+mainStart:
+	call spiInit			; Set up port initialisation
+	call spiIdle
 
 	call SER_INIT			; Enable the serial port
 
@@ -63,21 +98,15 @@ mainEscape:
 	call sendCrLf
 	jr mainLoop
 
-; ----------------------------
-; App version info
-; ----------------------------
-swVerMsg	.db "Version 1.0.0",0
-swInfoMsg	.db "Release build",0
-
 ; ----------------------------------------------------------------------------
 ; INCLUDE libraries
 ; ----------------------------------------------------------------------------
 
 ; ----------------------------------------------------------------------------
-#include "string.asm"
+#include "..\\Library\\string.asm"
 
 #ifdef ACIA
-#include "acia.asm"
+#include "..\\Library\\acia.asm"
 #endif
 
 #include "MinOS_sd.asm"
@@ -1254,7 +1283,7 @@ _ssCont2:
 	ld (currSector),a
 
 	call readSdSector		; Read the slot's sector into the buffer
-	call spiInit
+	call spiIdle
 
 	pop bc
 	ld a,c				; Fix A to old style slot number
@@ -1555,7 +1584,7 @@ beep:
 ; ----------------------------------------------------------------------------
 sdErrMsg:
 	call SER_TX_LINE
-	call spiInit
+	call spiIdle
 
 	ret
 
@@ -1569,7 +1598,7 @@ sdError:
 	ld hl,sdErrorStrNum
 
 sdErr2:	call SER_TX_LINE
-	call spiInit
+	call spiIdle
 	halt
 	ret
 
