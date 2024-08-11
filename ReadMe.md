@@ -55,9 +55,9 @@ Burn the binary image to a 2732 EPROM and place it in the U7 socket on the MPF-1
 The software has been designed to work with an ACIA serial card only (more in the works) at I/O address C8H. The hex load and SD card programs are designed to use the serial card at 115kbps with RTS/CTS handshaking. There is further information on the serial card at https://github.com/turbo-gecko/MPF/tree/main/Software/Hex%20Load
 
 #### SD Card
-The I/O card should be configured to use address FDH.
+The I/O card should be configured to use address FDH, however this can be modified along with the pin configurations in the spi_IO.ASM file at https://github.com/turbo-gecko/MPF/tree/main/Software/Library.
 
-Pin configurations as follows:
+Default pin configurations as follows:
 | I/O | Pin | Description |
 | --- | --- | ----------- |
 | In  |  7  | MISO        |
