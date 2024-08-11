@@ -1,4 +1,4 @@
-# Release Notes for the SD Card utilities
+# Release Notes for MinOS
 
 ## Known issues or limitations
 
