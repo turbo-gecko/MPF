@@ -996,6 +996,7 @@ readSdSector:
 _rssCont:
 	ld bc,514
 	call readSPIBlock
+	call spiIdle
 	scf
 	ccf				; No error so clear carry flag
 

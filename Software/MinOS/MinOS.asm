@@ -62,7 +62,7 @@ CODE_START	.equ	0a000h		; Requires RAM/FRAM in the 'Expand'
 ; ----------------------------
 ; App version info
 ; ----------------------------
-swVerMsg	.db "Version 1.1.0",0
+swVerMsg	.db "Version 1.1.1",0
 swInfoMsg	.db "Release build",0
 
 mainStart:

@@ -19,10 +19,10 @@ INT_DISABLE	.equ 03h			; Disable interrupts
 
 ; ----------------------------------------------------------------------------
 ; SPI port pins
-SPI_MISO	.equ 7			; Pin 7
-SPI_MOSI	.equ 0			; Pin 0
 SPI_CLK		.equ 1			; Pin 1
 SPI_CS		.equ 2			; Pin 2
+SPI_MISO	.equ 7			; Pin 0
+SPI_MOSI	.equ 0			; Pin 0
 
 ; ----------------------------------------------------------------------------
 ; SD card constants
@@ -102,8 +102,17 @@ _srBit:
 	set SPI_CLK,a			; Set CLK
 	out (SPI_PORT_OUT),a
 
-	ld c,a				; backup a
-	in a,(SPI_PORT_IN)			; bit d7
+	ld c,a				; Backup a
+	in a,(SPI_PORT_IN)		; Get bit
+	bit SPI_MISO,a
+	jr nz,_sr1Bit
+	res 7,a				; Clear bit 7
+	jr _srAddBit
+
+_sr1Bit:
+	set 7,a				; Set bit 7
+
+_srAddBit:
 	rla				; bit 7 -> carry
 	rl e				; carry -> E bit 0
 	ld a,c				; restore a

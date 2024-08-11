@@ -13,10 +13,10 @@ SPI_PORT_OUT	.equ 0fdh		; IO port for MOSI, CLK and CS
 
 ; ----------------------------------------------------------------------------
 ; SPI port pins
-SPI_MISO	.equ 7			; Pin 7
-SPI_MOSI	.equ 0			; Pin 0
 SPI_CLK		.equ 1			; Pin 1
 SPI_CS		.equ 2			; Pin 2
+SPI_MISO	.equ 7			; Pin 7
+SPI_MOSI	.equ 0			; Pin 0
 
 ; ----------------------------------------------------------------------------
 ; SD card constants
@@ -84,7 +84,16 @@ _srBit:
 	out (SPI_PORT_OUT),a
 
 	ld c,a				; Backup a
-	in a,(SPI_PORT_IN)		; Bit d7
+	in a,(SPI_PORT_IN)		; Get bit
+	bit SPI_MISO,a
+	jr nz,_sr1Bit
+	res 7,a				; Clear bit 7
+	jr _srAddBit
+
+_sr1Bit:
+	set 7,a				; Set bit 7
+
+_srAddBit:
 	rla				; Bit 7 -> carry
 	rl e				; Carry -> E bit 0
 	ld a,c				; Restore a
