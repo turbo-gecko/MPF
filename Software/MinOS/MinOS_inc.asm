@@ -10,6 +10,17 @@
 ; Constants
 ; ----------------------------
 
+; KS Wichit API Calls
+#ifdef KSWICHIT
+_HEX7SG		.equ	0678h		; Convert 2 hex digits to 7 seg display format
+_SCAN		.equ	05feh		; Scan keyboard and display until a new key-in
+_SCAN1		.equ	0624h		; Scan keyboard and display one cycle
+_TONE1K		.equ	05deh		; Generate sound at 1kHz
+_TONE2K		.equ	05e2h		; Generate sound at 2kHz
+
+BEEP_LENGTH	.equ	80h
+#endif
+
 ; MPF-1 API Calls
 #ifdef MPF-1
 _HEX7		.equ	0689h		; Convert a hex digit to 7 seg display format

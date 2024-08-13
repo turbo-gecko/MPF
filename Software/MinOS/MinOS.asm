@@ -1,7 +1,7 @@
 ; ----------------------------------------------------------------------------
 ; MinOS.asm
-; Version: 1.1
-; Last updated: 11/08/2024
+; Version: 1.2
+; Last updated: 14/08/2024
 ;
 ; Minimal OS for the MPF-1 trainer. It is also possible to recompile for
 ; different targets and interface cards. See the device specific comments
@@ -26,6 +26,8 @@
 
 ; ----------------------------
 ; Block 1 - Z80 devices
+; KS Wichet Z80 Microprocessor Kit
+;#define KSWICHIT
 ; MPF-1 - Microprofessor-1
 #define MPF-1
 ; TEC-1G - Aussie retro-modern Z80 trainer
@@ -43,6 +45,10 @@
 
 ; ----------------------------------------------------------------------------
 ; Choose the appropriate program start point in memory
+#ifdef KSWICHIT
+CODE_START	.equ	0e000h		; Requires the upper 32K RAM expansion
+#endif
+
 #ifdef MPF-1
 CODE_START	.equ	0e000h		; Requires the upper 32K RAM expansion
 #endif
@@ -62,7 +68,7 @@ CODE_START	.equ	0a000h		; Requires RAM/FRAM in the 'Expand'
 ; ----------------------------
 ; App version info
 ; ----------------------------
-swVerMsg	.db "Version 1.1.1",0
+swVerMsg	.db "Version 1.2",0
 swInfoMsg	.db "Release build",0
 
 mainStart:
@@ -1574,9 +1580,14 @@ _vfOK:
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 beep:
+#ifdef KSWICHIT
 	ld hl,BEEP_LENGTH
 	call _TONE1K
-
+#endif
+#ifdef MPF-1
+	ld hl,BEEP_LENGTH
+	call _TONE1K
+#endif
 	ret
 
 ; ----------------------------------------------------------------------------
