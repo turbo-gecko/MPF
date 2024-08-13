@@ -9,6 +9,9 @@
 ; The code has been written to use registers only (except for the test
 ; code)	to enable usage	in a ROM.
 ;
+; v1.4 - 14th August 2024
+;	 Fixed issue in acRxChar where registers were not being saved.
+;	 Refactored the style of the code.
 ; v1.3 - 27th July 2024
 ;	 Added acia agnostic function names.
 ; v1.2 - 21st July 2024
@@ -95,53 +98,50 @@ AC_SR_IF	.equ	7		; 10000000b Interrupt Flag (see	Control	Bits 5-7) (IRQ pin is n
 ; Test routine for the library
 ;---------------------------------------------------------------------
 #ifdef TEST_EN
-AC_LED_PORT	.equ	00h		; Debugging LED port
+AC_LED_PORT	.equ	40h		; Debugging LED port
 
 		.org	1800h
 
 acMain:
-		call acInit		; Initialise the ACIA
+	call acInit			; Initialise the ACIA
 
-		ld c,AC_P_CONT		; Get the current ACIA status...
-		in a,(c)
+	ld hl,CR_LF			; Send a CR/LF to start	a new line
+	call acTxStr
 
-		ld hl,CR_LF		; Send a CR/LF to start	a new line
-		call acTxStr
+	ld hl,MSG_START			; Send test start
+	call acTxLine
 
-		ld hl,MSG_START		; Send test start
-		call acTxStr
-
-		ld hl,CR_LF		; Terminate with another CR/LF
-		call acTxStr
+	ld hl,CR_LF			; Terminate with another CR/LF
+	call acTxStr
 
 acMain_1
-		call acRxChar		; Perform loopback test...
+	call acRxChar			; Perform loopback test...
 
-		push af
-		cp 1bh			; Escape key to	quit
-		jr z,acMain_2
+	push af
+	cp 1bh				; Escape key to	quit
+	jr z,acMain_2
 
-		ld c,AC_P_CONT		; Get ACIA status
-		in a,(c)
-		ld c,AC_LED_PORT
-		out (c),a
+	ld c,AC_P_CONT			; Get ACIA status
+	in a,(c)
+	ld c,AC_LED_PORT
+	out (c),a
 
-		pop af
-		call acTxChar
+	pop af
+	call acTxChar
 
-		jr acMain_1
+	jr acMain_1
 
 acMain_2
-		ld hl,CR_LF		; Send a CR/LF to start	a new line
-		call acTxStr
+	ld hl,CR_LF			; Send a CR/LF to start	a new line
+	call acTxStr
 
-		ld hl,MSG_END		; Send test complete
-		call acTxStr
+	ld hl,MSG_END			; Send test complete
+	call acTxStr
 
-		ld hl,CR_LF		; Terminate with another CR/LF
-		call acTxStr
+	ld hl,CR_LF			; Terminate with another CR/LF
+	call acTxStr
 
-		rst	00h
+	rst	00h
 
 CR_LF		.db	0dh, 0ah, 0
 MSG_END		.db	"ACIA loopback test complete.",0
@@ -159,26 +159,26 @@ MSG_START	.db	"ACIA loopback test. Press <Esc> to quit.",0
 ;---------------------------------------------------------------------
 acInit:
 SER_INIT:
-		ld c,AC_P_CONT		; Reset	the ACIA
-		ld a,AC_RESET
-		out (c),a
+	ld c,AC_P_CONT			; Reset	the ACIA
+	ld a,AC_RESET
+	out (c),a
 
-		ld de,0100h		; Add delay for reset to take effect
+	ld de,0100h			; Add delay for reset to take effect
 
 acInit_1
-		dec de
-		ld a,d
-		cp 0
-		jr nz,acInit_1
-		ld a,e
-		cp 0
-		jr nz,acInit_1
+	dec de
+	ld a,d
+	cp 0
+	jr nz,acInit_1
+	ld a,e
+	cp 0
+	jr nz,acInit_1
 
-		ld c,AC_P_CONT		; Set up the ACIA configuration
-		ld a,AC_CLK64 + AC_8N1 + AC_LR_DI + AC_RI_DIS
-		out (c),a
+	ld c,AC_P_CONT			; Set up the ACIA configuration
+	ld a,AC_CLK64 + AC_8N1 + AC_LR_DI + AC_RI_DIS
+	out (c),a
 
-		ret
+	ret
 
 ;---------------------------------------------------------------------
 ; acRtsHigh
@@ -190,11 +190,11 @@ acInit_1
 ;---------------------------------------------------------------------
 acRtsHigh:
 SER_RTS_HIGH:
-		ld c,AC_P_CONT		; Set up the ACIA configuration
-		ld a,AC_CLK64 + AC_8N1 + AC_HR_DI + AC_RI_DIS
-		out (c),a
+	ld c,AC_P_CONT			; Set up the ACIA configuration
+	ld a,AC_CLK64 + AC_8N1 + AC_HR_DI + AC_RI_DIS
+	out (c),a
 
-		ret
+	ret
 
 ;---------------------------------------------------------------------
 ; acRtsLow
@@ -206,11 +206,11 @@ SER_RTS_HIGH:
 ;---------------------------------------------------------------------
 acRtsLow:
 SER_RTS_LOW:
-		ld c,AC_P_CONT		; Set up the ACIA configuration
-		ld a,AC_CLK64 + AC_8N1 + AC_LR_DI + AC_RI_DIS
-		out (c),a
+	ld c,AC_P_CONT			; Set up the ACIA configuration
+	ld a,AC_CLK64 + AC_8N1 + AC_LR_DI + AC_RI_DIS
+	out (c),a
 
-		ret
+	ret
 
 ;---------------------------------------------------------------------
 ; acRxChar
@@ -225,23 +225,31 @@ SER_RTS_LOW:
 ;---------------------------------------------------------------------
 acRxChar:
 SER_RX_CHAR:
-		call acRtsLow		; Other computer can now to send
+	push	bc
+	push	de
+	push	hl
 
-		ld c,AC_P_CONT		; Get ACIA status
+	call acRtsLow			; Other computer can now to send
+
+	ld c,AC_P_CONT			; Get ACIA status
 
 acRxChar_1
-		in a,(c)	
-		bit AC_SR_RD,a
-		jr z,acRxChar_1		; Loop until a character is received
+	in a,(c)	
+	bit AC_SR_RD,a
+	jr z,acRxChar_1			; Loop until a character is received
 
-		ld c,AC_P_DATA		; Get byte from the RX port
-		in a,(c)
-		ld l,a
+	ld c,AC_P_DATA			; Get byte from the RX port
+	in a,(c)
+	ld l,a
 
-		call acRtsHigh		; Stop other computer from sending
-		ld a,l
+	call acRtsHigh			; Stop other computer from sending
+	ld a,l
 
-		ret
+	pop	hl
+	pop	de
+	pop	bc
+
+	ret
 
 ;---------------------------------------------------------------------
 ; acTxChar
@@ -253,19 +261,19 @@ acRxChar_1
 ;---------------------------------------------------------------------
 acTxChar:
 SER_TX_CHAR:
-		push af
-		ld c,AC_P_CONT		; Get ACIA status
+	push af
+	ld c,AC_P_CONT			; Get ACIA status
 
 acTxChar_1
-		in a,(c)
-		bit AC_SR_TD,a		; Check to see if the ACIA is ready to accept data
-		jr z,acTxChar_1
+	in a,(c)
+	bit AC_SR_TD,a			; Check to see if the ACIA is ready to accept data
+	jr z,acTxChar_1
 
-		ld c,AC_P_DATA		; Queue the data for sending
-		pop af
-		out (c),a
+	ld c,AC_P_DATA			; Queue the data for sending
+	pop af
+	out (c),a
 
-		ret
+	ret
 
 ;---------------------------------------------------------------------
 ; acTxLine
@@ -277,20 +285,20 @@ acTxChar_1
 ;---------------------------------------------------------------------
 acTxLine:
 SER_TX_LINE:
-		ld a,(hl)		; Get the character from the string
-		cp 0
-		jr z,acTxLine_1		; Reached the end of the string
-		call acTxChar
-		inc hl
-		jr acTxLine
+	ld a,(hl)			; Get the character from the string
+	cp 0
+	jr z,acTxLine_1			; Reached the end of the string
+	call acTxChar
+	inc hl
+	jr acTxLine
 
 acTxLine_1
-		ld a,0dh		; Carriage return
-		call acTxChar
-		ld a,0ah		; Line feed
-		call acTxChar
+	ld a,0dh			; Carriage return
+	call acTxChar
+	ld a,0ah			; Line feed
+	call acTxChar
 
-		ret
+	ret
 
 ;---------------------------------------------------------------------
 ; acTxStr
@@ -302,14 +310,14 @@ acTxLine_1
 ;---------------------------------------------------------------------
 acTxStr:
 SER_TX_STRING:
-		ld a,(hl)		; Get the character from the string
-		cp 0
-		jr z,acTxStr_1		; Reached the end of the string
-		call acTxChar
-		inc hl
-		jr acTxStr
+	ld a,(hl)			; Get the character from the string
+	cp 0
+	jr z,acTxStr_1			; Reached the end of the string
+	call acTxChar
+	inc hl
+	jr acTxStr
 
 acTxStr_1
-		ret
+	ret
 
 		.end
