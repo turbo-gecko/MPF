@@ -17,7 +17,7 @@ If the supplied 7.3728 MHz crystal is used as the clock for the SC-139, this wil
 **hex-load.asm** is a simple Intel hex file loader that can be used to transfer Intel hex files via the ACIA card to the MPF-1. 
 The hex-load.hex file is ready to be burned into an EPROM for the U7 socket. Once burned and installed, go to address 2000H and press 'GO'. On the serial terminal will be displayed...
 
-    Intel hex file loader v1.1
+    Intel hex file loader v1.4
     Send file when ready. Press <Esc> to quit.
 
 From the serial terminal program, send a text file such as 'helpus.hex' from the Work Book Examples folder and the download will be echoed to the terminal. 

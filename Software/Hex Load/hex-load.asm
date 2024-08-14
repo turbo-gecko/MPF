@@ -16,6 +16,9 @@
 ; Requires acia.asm. To	use a different comms IC, replace the acia.asm
 ; library which	the device specific libray.
 ;
+; v1.4 - 15th August 2024
+;	 Change exit from rst 00h to ret to enable calling from other
+;	 programs.
 ; v1.3 - 14th August 2024
 ;	 Refactored to use common serial driver.
 ; v1.2 - 12th April 2024
@@ -39,12 +42,13 @@ ESC	.equ	1bh
 ;---------------------------------------------------------------------
 
 	;.org	00dd0h			; KS Wichit ROM
-	;.org	02000h			; MPF-1 Expansion ROM
+	.org	02000h			; MPF-1 Expansion ROM
 	;.org	04000h			; TEC-1G User RAM
 	;.org	0bd00h			; TEC-1G Expansion RAM/ROM/FRAM
-	.org	0dd00h			; KS Wichit RAM
+	;.org	0dd00h			; KS Wichit RAM
 	
 MAIN:
+	push	af			; Save state of A. Used at exit
 	call	SER_INIT		; Initialise the ACIA
 
 	call	CRLF			; Send a CR/LF to start a new line
@@ -123,20 +127,24 @@ LOAD_EXIT:
 	
 	call	SER_RTS_LOW		; Other computer can now to send
 
+	pop	af			; Restore A and look for magic number
+	cp	42h			; to see if called from a program
+	jr	nz,LOAD_EXIT_ROM
+	ret				; Return to program that called us
+
+LOAD_EXIT_ROM:
 	rst	00h			; We are all done.
 
 LOAD_QUIT:
 	ld	hl,MSG_QUIT
 	call	SER_TX_STRING		; Print quit message
-	call	LOAD_EXIT
-
-	ret
+	jr	LOAD_EXIT
 
 LOAD_DONE:
 	call	CRLF
 	ld	hl,MSG_DONE
 	call	SER_TX_STRING
-	call	LOAD_EXIT
+	jr	LOAD_EXIT
 
 LOAD_CHK:
 	ld	c,a			; All in all compute E = E - A
@@ -292,7 +300,7 @@ TO_UPPER:
 MSG_DONE	.db	"Transfer complete.", CR, LF, 0
 MSG_ERROR_1	.db	" <-Syntax error!", CR, LF, 0
 MSG_ERROR_2	.db	"Checksum error!", 0
-MSG_INTRO_1	.db	"Intel hex file loader v1.3", CR, LF, 0
+MSG_INTRO_1	.db	"Intel hex file loader v1.4", CR, LF, 0
 MSG_INTRO_2	.db	"Send file when ready. Press <Esc> to quit.", CR, LF, 0
 MSG_QUIT	.db	"Quitting program.", CR, LF, 0
 
