@@ -27,7 +27,7 @@ A basic expansion bus will require as a minimum:
 This provides the necessary backplane, power and connectivity to expand the MPF-1.
 
 ### Adding additional memory
-The MPF-1 comes with 2K of RAM fitted from 1800H to 1FFFH. This is insufficient for use with an expansion bus so the first card that should be optained is a memory expansion card with a minimum of 32K such as:
+The MPF-1 comes with 2K of RAM fitted from 1800H to 1FFFH. This is insufficient for use with an expansion bus so the first card that should be obtained is a memory expansion card with a minimum of 32K such as:
 - The 64K RAM module at https://z80kits.com/shop/64k-ram-module/ is a good choice. This is the module that is fitted in the backplane in the photo's. It has been configured to provide RAM from 4000H through to FFFFH, an additional 48K!
 - Another module that I have experimented with is the Paged RAM module at https://smallcomputercentral.com/sc150-paged-ram-module-rc2014/. This can provide 32K from 8000H to FFFFH.
 
