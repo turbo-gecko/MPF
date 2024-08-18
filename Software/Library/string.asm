@@ -1,16 +1,12 @@
 ;---------------------------------------------------------------------
 ; string.asm
-;
 ; Collection of functions for manipulation of strings.
 ;
+; v1.1 - 15th August 2024
+;	 Refactored the style of the code.
 ; v1.0 - 28th July 2024
 ;	 Initial version.
 ;---------------------------------------------------------------------
-
-;---------------------------------------------------------------------
-; Constants
-;---------------------------------------------------------------------
-
 
 ; ----------------------------------------------------------------------------
 ; asciiDecToNum
@@ -23,16 +19,16 @@
 ; ----------------------------------------------------------------------------
 
 asciiDecToNum:
-	sub '0'				; Test for ASCII decimal digit
-	cp 10
-	jr nc,_adtnInvalid		; Error if >= 10
+	sub	'0'			; Test for ASCII decimal digit
+	cp	10
+	jr	nc,_adtnInvalid		; Error if >= 10
 
 	scf
 	ccf				; Clear the carry flag as success
 	ret
 
 _adtnInvalid
-	ld a,0				; Return A as 0
+	ld	a,0			; Return A as 0
 	scf				; Set carry flag as error
 	ret
 
@@ -46,27 +42,27 @@ _adtnInvalid
 ; Destroys:	A, BC
 ; ----------------------------------------------------------------------------
 asciiHexToNum:
-	ld b,a				; Save ascii number
+	ld	b,a			; Save ascii number
 
-	sub '0'				; Test for ASCII decimal digit
-	cp 10
-	jr nc,_ahtnCheckUC		; Error if >= 10
-	jr _ahtnDone
+	sub	'0'			; Test for ASCII decimal digit
+	cp	10
+	jr	nc,_ahtnCheckUC		; Error if >= 10
+	jr	_ahtnDone
 
 _ahtnCheckUC
-	ld a,b				; Restore ascii number
-	sub 'A'				; Test for ASCII hex digit
-	cp 6
-	jr nc,_ahtnCheckLC		; Error if >= F
-	add a,0ah
-	jr _ahtnDone
+	ld	a,b			; Restore ascii number
+	sub	'A'			; Test for ASCII hex digit
+	cp	6
+	jr	nc,_ahtnCheckLC		; Error if >= F
+	add	a,0ah
+	jr	_ahtnDone
 
 _ahtnCheckLC
-	ld a,b				; Restore ascii number
-	sub 'a'				; Test for ASCII hex digit
-	cp 6
-	jr nc,_ahtnInvalid		; Error if >= f
-	add a,0ah
+	ld	a,b			; Restore ascii number
+	sub	'a'			; Test for ASCII hex digit
+	cp	6
+	jr	nc,_ahtnInvalid		; Error if >= f
+	add	a,0ah
 
 _ahtnDone
 	scf
@@ -74,7 +70,7 @@ _ahtnDone
 	ret
 
 _ahtnInvalid
-	ld a,0				; Return A as 0
+	ld	a,0			; Return A as 0
 	scf				; Set carry flag as error
 	ret
 
@@ -88,30 +84,30 @@ _ahtnInvalid
 ; Destroys:	A, BC, DE
 ; ----------------------------------------------------------------------------
 aToDecString:
-	ld l,a
-	ld a,0
-	ld h,a
+	ld	l,a
+	ld	a,0
+	ld	h,a
 
-	ld bc,-100
-	call _atds1
-	ld c,-10
-	call _atds1
-	ld c,-1
+	ld	bc,-100
+	call	_atds1
+	ld	c,-10
+	call	_atds1
+	ld	c,-1
 
 _atds1
-	ld a,'0'-1
+	ld	a,'0'-1
 
 _atds2
-	inc a
-	add hl,bc
-	jr c,_atds2
-	sbc hl,bc
+	inc	a
+	add	hl,bc
+	jr	c,_atds2
+	sbc	hl,bc
 
 _atds3
-	ld (de),a
-	inc de
-	ld a,' '
-	ld (de),a
+	ld	(de),a
+	inc	de
+	ld	a,' '
+	ld	(de),a
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -123,11 +119,11 @@ _atds3
 ; Destroys:	None
 ; ----------------------------------------------------------------------------
 aToNibble:	
-	and 0fh				; Just in case...
-	add a,'0'			; If we have a digit we are done here.
-	cp '9' + 1			; Is the result > 9?
-	jr c, _atnDone
-	add a,'A'-'0'-$a		; Take care of A-F
+	and	0fh			; Just in case...
+	add	a,'0'			; If we have a digit we are done here.
+	cp	'9'+1			; Is the result > 9?
+	jr	c,_atnDone
+	add	a,'A'-'0'-$a		; Take care of A-F
 
 _atnDone
 	ret
@@ -142,24 +138,24 @@ _atnDone
 ; Destroys:	A, DE
 ; ----------------------------------------------------------------------------
 aToString:
-	push af
-	and 0f0h			; Mask off high order nibble
-	sra a				; Move to the lower nibble
-	sra a
-	sra a
-	sra a
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
+	push	af
+	and	0f0h			; Mask off high order nibble
+	sra	a			; Move to the lower nibble
+	sra	a
+	sra	a
+	sra	a
+	call	aToNibble		; Convert to ASCII
+	ld	(de),a			; Update the string
+	inc	de
 
-	pop af
-	and 0fh				; Mask off low order nibble
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
+	pop	af
+	and	0fh			; Mask off low order nibble
+	call	aToNibble		; Convert to ASCII
+	ld	(de),a			; Update the string
+	inc	de
 
-	ld a,0
-	ld (de),a
+	ld	a,0
+	ld	(de),a
 
 	ret
 
@@ -173,40 +169,40 @@ aToString:
 ; Destroys:	A, DE
 ; ----------------------------------------------------------------------------
 hlToString:
-	ld a,h				; Get the high order byte
-	and 0f0h			; Mask off high order nibble
-	sra a				; Move to the lower nibble
-	sra a
-	sra a
-	sra a
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
+	ld	a,h			; Get the high order byte
+	and	0f0h			; Mask off high order nibble
+	sra	a			; Move to the lower nibble
+	sra	a
+	sra	a
+	sra	a
+	call	aToNibble		; Convert to ASCII
+	ld	(de),a			; Update the string
+	inc	de
 
-	ld a,h				; Get the high order byte
-	and 0fh				; Mask off low order nibble
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
+	ld	a,h			; Get the high order byte
+	and	0fh			; Mask off low order nibble
+	call	aToNibble		; Convert to ASCII
+	ld	(de),a			; Update the string
+	inc	de
 
-	ld a,l				; Get the low order byte
-	and 0f0h			; Mask off high order nibble
-	sra a				; Move to the lower nibble
-	sra a
-	sra a
-	sra a
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
+	ld	a,l			; Get the low order byte
+	and	0f0h			; Mask off high order nibble
+	sra	a			; Move to the lower nibble
+	sra	a
+	sra	a
+	sra	a
+	call	aToNibble		; Convert to ASCII
+	ld	(de),a			; Update the string
+	inc	de
 
-	ld a,l				; Get the low order byte
-	and 0fh				; Mask off low order nibble
-	call aToNibble			; Convert to ASCII
-	ld (de),a			; Update the string
-	inc de
+	ld	a,l			; Get the low order byte
+	and	0fh			; Mask off low order nibble
+	call	aToNibble		; Convert to ASCII
+	ld	(de),a			; Update the string
+	inc	de
 
-	ld a,0
-	ld (de),a
+	ld	a,0
+	ld	(de),a
 
 	ret
 
@@ -219,18 +215,18 @@ hlToString:
 ; Destroys:	BC, HL
 ; ----------------------------------------------------------------------------
 hlX10:
-	push bc
+	push	bc
 
-	push hl
-	pop bc
+	push	hl
+	pop	bc
 
-	add hl,hl
-	add hl,hl
-	add hl,hl
-	add hl,bc
-	add hl,bc
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,bc
+	add	hl,bc
 
-	pop bc
+	pop	bc
 
 	ret
 
@@ -244,14 +240,17 @@ hlX10:
 ; Output:	Clears carry flag on success, sets carry flag on fail
 ; Destroys:	A, DE, HL
 ; ----------------------------------------------------------------------------
+strCompR18:
+	ld	b,a			; Adjustment when called from RST 18H
+
 strCompare:
-	ld a,(de)			; Get string 2 char
-	sub (hl)			; Get string 1 char and subtract it
-	cp 0
-	jr nz,_scFail			; They are not the same...
-	inc de				; Get ready for next char
-	inc hl
-	djnz strCompare			; More chars to process...
+	ld	a,(de)			; Get string 2 char
+	sub	(hl)			; Get string 1 char and subtract it
+	cp	0
+	jr	nz,_scFail		; They are not the same...
+	inc	de			; Get ready for next char
+	inc	hl
+	djnz	strCompare		; More chars to process...
 
 	scf
 	ccf
@@ -271,75 +270,76 @@ _scFail
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 strDecToNum:
-	push hl
-	ld de,0
+	push	hl
+	ld	de,0
 
 _stnLoop
-	ld a,(hl)			; determine the end of the string
-	cp 0				; Check for the null character
-	jr z,_stnConvert		; End of string found
-	inc hl				; Otherwise go to the next character
-	inc d
-	inc e
-	ld a,e
-	cp 6				; If there is more than 5 chars + null
-	jr nc,_stnInvalid		; then number is too big
-	jr _stnLoop
+	ld	a,(hl)			; determine the end of the string
+	cp	0			; Check for the null character
+	jr	z,_stnConvert		; End of string found
+	inc	hl			; Otherwise go to the next character
+	inc	d
+	inc	e
+	ld	a,e
+	cp	6			; If there is more than 5 chars + null
+	jr	nc,_stnInvalid		; then number is too big
+	jr	_stnLoop
 
 _stnConvert
-	ld bc,0				; take the LSD and add it to BC
-	dec hl
-	ld a,(hl)
-	push de
-	call asciiDecToNum
-	jr c,_stnInvalid
+	ld	bc,0			; take the LSD and add it to BC
+	dec	hl
+	ld	a,(hl)
+	push	de
+	call	asciiDecToNum
+	jr	c,_stnInvalid
 
-	ld c,a
-	pop de
-	dec e
-	jr z,_stnDone
+	ld	c,a
+	pop	de
+	dec	e
+	jr	z,_stnDone
 
 _stnDigit
-	dec hl				; take the next digit x10 add to BC
-	ld a,(hl)
-	push de
-	call asciiDecToNum
+	dec	hl			; take the next digit x10 add to BC
+	ld	a,(hl)
+	push	de
+	call	asciiDecToNum
 
-	jr c,_stnInvalid
+	jr	c,_stnInvalid
 
-	pop de
-	push hl
-	ld h,0
-	ld l,a
-	push de
+	pop	de
+	push	hl
+	ld	h,0
+	ld	l,a
+	push	de
+
 _stnMult
-	ld a,d
-	cp e
-	jr z,_stnMultSkip
-	call hlX10
-	dec d
-	jr _stnMult
+	ld	a,d
+	cp	e
+	jr	z,_stnMultSkip
+	call	hlX10
+	dec	d
+	jr	_stnMult
 
 _stnMultSkip
-	add hl,bc
-	push hl
-	pop bc
-	pop de
-	pop hl
+	add	hl,bc
+	push	hl
+	pop	bc
+	pop	de
+	pop	hl
 
-	dec e
-	jr z,_stnDone
+	dec	e
+	jr	z,_stnDone
 
-	jr _stnDigit
+	jr	_stnDigit
 
 _stnInvalid
-	pop hl
-	ld bc,0				; Clear the number
+	pop	hl
+	ld	bc,0			; Clear the number
 	scf				; Set carry flag as error
 	ret
 
 _stnDone
-	pop hl
+	pop	hl
 	scf
 	ccf				; Clear carry flag as success
 	ret
@@ -354,52 +354,52 @@ _stnDone
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 strHexToNum:
-	push hl
-	ld de,0				; Reset loop counter
-	ld bc,0				; Clear returned value
+	push	hl
+	ld	de,0			; Reset loop counter
+	ld	bc,0			; Clear returned value
 
 _sthLoop
-	ld a,(hl)			; determine the end of the string
-	cp 0				; Check for the null character
-	jr z,_sthConvert		; End of string found
-	inc hl				; Otherwise go to the next character
-	inc e
-	ld a,e
-	cp 5				; If there is more than 4 chars + null
-	jr c,_sthLoop			; then number is too big
-	pop hl
-	jr _sthInvalid
+	ld	a,(hl)			; determine the end of the string
+	cp	0			; Check for the null character
+	jr	z,_sthConvert		; End of string found
+	inc	hl			; Otherwise go to the next character
+	inc	e
+	ld	a,e
+	cp	5			; If there is more than 4 chars + null
+	jr	c,_sthLoop		; then number is too big
+	pop	hl
+	jr	_sthInvalid
 
 _sthConvert
-	pop de				; Copy hex string pointer to DE
-	ld hl,0
+	pop	de			; Copy hex string pointer to DE
+	ld	hl,0
 
 _sthAddDigits
-	ld a,(de)
-	call asciiHexToNum		; Convert the char to a num
-	jr c,_sthInvalid		; If not a valid char, exit
-	add hl,hl
-	add hl,hl
-	add hl,hl
-	add hl,hl
-	add a,l
-	ld l,a
+	ld	a,(de)
+	call	asciiHexToNum		; Convert the char to a num
+	jr	c,_sthInvalid		; If not a valid char, exit
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	a,l
+	ld	l,a
 
-	inc de
-	ld a,(de)			; Get the next byte in the string
-	cp 0h				; Is it null? (end of string)
-	jr z,_sthDone
-	jr _sthAddDigits
+	inc	de
+	ld	a,(de)			; Get the next byte in the string
+	cp	0h			; Is it null? (end of string)
+	jr	z,_sthDone
+	jr	_sthAddDigits
 
 _sthInvalid
-	ld bc,0				; Clear the number
+	ld	bc,0			; Clear the number
 
 	scf				; Set carry flag as error
 	ret
 
 _sthDone
-	push hl				; Restore the number to BC
-	pop bc
+	push	hl			; Restore the number to BC
+	pop	bc
 
 	scf
 	ccf				; Clear carry flag as success
@@ -414,17 +414,82 @@ _sthDone
 ; Destroys:	A, BC, HL
 ; ----------------------------------------------------------------------------
 strSize:
-	ld bc,0				; Clear the byte counter
+	ld	bc,0			; Clear the byte counter
 
 _sszLoop
-	ld a,(hl)			; Get string character
-	cp 0
-	jr z,_sszDone			; Is it a null?
-	inc hl				; Set up for next character in the string
-	inc bc				; Increment the byte count
-	jr _sszLoop
+	ld	a,(hl)			; Get string character
+	cp	0
+	jr	z,_sszDone		; Is it a null?
+	inc	hl			; Set up for next character in the string
+	inc	bc			; Increment the byte count
+	jr	_sszLoop
 
 _sszDone
 	scf
 	ret
 
+#ifdef ROM_LOAD
+; ----------------------------------------------------------------------------
+; RST 18H entry point
+; ----------------------------------------------------------------------------
+; ----------------------------------------------------------------------------
+; rst18Entry
+; Entry point from the RST 18H restart call
+;
+; Input:	B -- RST 18H function call
+; Output:	Sets carry flag on error, clears on success
+; Destroys:	HL, IX
+; ----------------------------------------------------------------------------
+rst18Entry:
+	push	af			; Save registers
+	push	bc
+	push	de
+
+	ld	a,(r18JumpMax)
+	cp	b
+	jr	c,_rst18Valid		; Check for a valid jump function
+
+	pop	de			; Restore registers
+	pop	bc
+	pop	af
+
+	scf				; Return error in carry flag
+	ret
+
+_rst18Valid
+	ld	hl,r18JumpTable		; Get the base to the error table
+	sla	a			; multiple code by 2 for correct index
+	ld	b,0
+	ld	c,a
+	adc	hl,bc			; Calculate the offset for the jump
+
+	push	hl
+	pop	ix
+	ld	h,(ix+1)		; Update HL with jump pointer
+	ld	l,(ix+0)
+
+	pop	de			; Restore registers
+	pop	bc
+	pop	af
+
+	jp	(hl)
+
+	scf				; Return success
+	ccf
+	ret
+
+; ---------------------------- Jump Table
+; Maximum of 256 jump points
+
+r18JumpMax	.db	10			; Number of jump points
+r18JumpTable	.dw	asciiDecToNum		; Jump address
+		.dw	asciiHexToNum
+		.dw	aToDecString
+		.dw	aToNibble
+		.dw	aToString
+		.dw	hlToString
+		.dw	strCompR18
+		.dw	strDecToNum
+		.dw	strHexToNum
+		.dw	strSize
+#endif
