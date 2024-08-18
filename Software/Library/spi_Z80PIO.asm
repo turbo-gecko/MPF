@@ -1,21 +1,22 @@
 ; ----------------------------------------------------------------------------
 ; spi_IO.asm
-; Version: 1.0
-; Last updated: 11/08/2024
-;
 ; Hardware SPI driver for a generic IO card for use with MinOS.
+;
+; v1.1 - 15th August 2024
+;	 Refactored the style of the code.
+; v1.0 - 11th August 2024
 ; ----------------------------------------------------------------------------
 
 ;
 ; SPI
-SPI_PORT_OUT	.equ 80h			; IO port for MOSI, CLK and CS
-SPI_PORT_IN	.equ 81h			; IO port for MISO
+SPI_PORT_OUT	.equ 80h		; IO port for MOSI, CLK and CS
+SPI_PORT_IN	.equ 81h		; IO port for MISO
 CTRL_PORT_A	.equ 82h
 CTRL_PORT_B	.equ 83h
 
-PORT_A_MODE	.equ 0fh			; Mode 0 output port
-PORT_B_MODE	.equ 4fh			; Mode 1 input port
-INT_DISABLE	.equ 03h			; Disable interrupts
+PORT_A_MODE	.equ 0fh		; Mode 0 output port
+PORT_B_MODE	.equ 4fh		; Mode 1 input port
+INT_DISABLE	.equ 03h		; Disable interrupts
 
 ; ----------------------------------------------------------------------------
 ; SPI port pins
@@ -42,14 +43,14 @@ SD_CLK		.equ 1
 ; Destroys:	None
 ; ----------------------------------------------------------------------------
 spiIdle:
-	push af
+	push	af
 
-	xor a				; Clear A register
-	set SPI_CS,a			; CS = high
-	set SPI_MOSI,a			; MOSI = high
-	out (SPI_PORT_OUT),a		; Set the pins
+	xor	a			; Clear A register
+	set	SPI_CS,a		; CS = high
+	set	SPI_MOSI,a		; MOSI = high
+	out	(SPI_PORT_OUT),a	; Set the pins
 
-	pop af
+	pop	af
 
 	ret
 
@@ -62,17 +63,17 @@ spiIdle:
 ; Destroys:	None
 ; ----------------------------------------------------------------------------
 spiInit:
-	ld a,PORT_A_MODE			; Set up port A as output
-	out (CTRL_PORT_A),a
+	ld	a,PORT_A_MODE		; Set up port A as output
+	out	(CTRL_PORT_A),a
 
-	ld a,PORT_B_MODE			; Set up port B as input
-	out (CTRL_PORT_B),a
+	ld	a,PORT_B_MODE		; Set up port B as input
+	out	(CTRL_PORT_B),a
 
-	ld a,INT_DISABLE			; Disable interrupts
-	out (CTRL_PORT_A),a
+	ld	a,INT_DISABLE		; Disable interrupts
+	out	(CTRL_PORT_A),a
 
-	ld a,INT_DISABLE			; Disable interrupts
-	out (CTRL_PORT_B),a
+	ld	a,INT_DISABLE		; Disable interrupts
+	out	(CTRL_PORT_B),a
 
 	ret
 
@@ -85,47 +86,47 @@ spiInit:
 ; Destroys:	A
 ; ----------------------------------------------------------------------------
 spiRdb:
-	push bc
-	push de
+	push	bc
+	push	de
 
-	ld e,0				; Clear the result
-	ld b,8				; 8 bits to read
+	ld	e,0			; Clear the result
+	ld	b,8			; 8 bits to read
 
-	xor a				; Clear A register
-	res SPI_CS,a			; CS = low
-	set SPI_MOSI,a			; MOSI = high
+	xor	a			; Clear A register
+	res	SPI_CS,a		; CS = low
+	set	SPI_MOSI,a		; MOSI = high
 
-	out (SPI_PORT_OUT),a		; CS active low
+	out	(SPI_PORT_OUT),a	; CS active low
 	nop
 
 _srBit:
-	set SPI_CLK,a			; Set CLK
-	out (SPI_PORT_OUT),a
+	set	SPI_CLK,a		; Set CLK
+	out	(SPI_PORT_OUT),a
 
-	ld c,a				; Backup a
-	in a,(SPI_PORT_IN)		; Get bit
-	bit SPI_MISO,a
-	jr nz,_sr1Bit
-	res 7,a				; Clear bit 7
-	jr _srAddBit
+	ld	c,a			; Backup a
+	in	a,(SPI_PORT_IN)		; Get bit
+	bit	SPI_MISO,a
+	jr	nz,_sr1Bit
+	res	7,a			; Clear bit 7
+	jr	_srAddBit
 
 _sr1Bit:
-	set 7,a				; Set bit 7
+	set	7,a			; Set bit 7
 
 _srAddBit:
 	rla				; bit 7 -> carry
-	rl e				; carry -> E bit 0
-	ld a,c				; restore a
+	rl	e			; carry -> E bit 0
+	ld	a,c			; restore a
 
-	res SPI_CLK,a			; Clear CLK
-	out (SPI_PORT_OUT),a
+	res	SPI_CLK,a		; Clear CLK
+	out	(SPI_PORT_OUT),a
 
-	djnz _srBit
+	djnz	_srBit
 
-	ld a,e
+	ld	a,e
 
-	pop de
-	pop bc
+	pop	de
+	pop	bc
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -137,20 +138,20 @@ _srAddBit:
 ; Destroys:	A
 ; ----------------------------------------------------------------------------
 spiReset:
-	call spiIdle			; Set SD interface to idle state
+	call	spiIdle			; Set SD interface to idle state
 
-	ld b,RESET_CLK_COUNT		; Toggle clk 80 times
+	ld	b,RESET_CLK_COUNT	; Toggle clk 80 times
 
 _spiToggle:
-	out (SPI_PORT_OUT),a
-	set SPI_CLK,a			; Set CLK
-	out (SPI_PORT_OUT),a
+	out	(SPI_PORT_OUT),a
+	set	SPI_CLK,a		; Set CLK
+	out	(SPI_PORT_OUT),a
 	nop
-	res SPI_CLK,a			; Clear CLK
-	out (SPI_PORT_OUT),a
-	djnz _spiToggle
+	res	SPI_CLK,a		; Clear CLK
+	out	(SPI_PORT_OUT),a
+	djnz	_spiToggle
 
-	call spiIdle
+	call	spiIdle
 
 	ret
 
@@ -163,29 +164,29 @@ _spiToggle:
 ; Destroys:	None
 ; ----------------------------------------------------------------------------
 spiWrb:
-	push af
-	push bc
-	ld b,8				; 8 bits to send
+	push	af
+	push	bc
+	ld	b,8			; 8 bits to send
 
 _swBit:
-	xor a				; Clear A register
-	res SPI_CS,a			; CS = low
-	set SPI_MOSI,a			; MOSI = high
-	bit 7,c				; Check to see if the next bit is a 1
-	jr nz,_swBitSend
-	res SPI_MOSI,a			; No, set the MOSI pin low
+	xor	a			; Clear A register
+	res	SPI_CS,a		; CS = low
+	set	SPI_MOSI,a		; MOSI = high
+	bit	7,c			; Check to see if the next bit is a 1
+	jr	nz,_swBitSend
+	res	SPI_MOSI,a		; No, set the MOSI pin low
 
 _swBitSend:
-	out (SPI_PORT_OUT),a		; Setup data bit
-	set SPI_CLK,a			; Set CLK
-	out (SPI_PORT_OUT),a
+	out	(SPI_PORT_OUT),a	; Setup data bit
+	set	SPI_CLK,a		; Set CLK
+	out	(SPI_PORT_OUT),a
 	nop
-	res SPI_CLK,a			; Clear CLK
-	out (SPI_PORT_OUT),a
-	rlc c				; Get next bit
-	djnz _swBit
+	res	SPI_CLK,a		; Clear CLK
+	out	(SPI_PORT_OUT),a
+	rlc	c			; Get next bit
+	djnz	_swBit
 
-	pop bc
-	pop af
+	pop	bc
+	pop	af
 	ret
 
