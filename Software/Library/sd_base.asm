@@ -2,6 +2,8 @@
 ; sd_base.asm
 ; Minimal SD card library for ROM usage.
 ;
+; v1.1 - 18th August 2024
+;	 Fixed issues with card initialisation 
 ; v1.0 - 17th August 2024
 ; ----------------------------------------------------------------------------
 
