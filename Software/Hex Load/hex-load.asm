@@ -32,20 +32,20 @@
 ;---------------------------------------------------------------------
 ; Constants
 ;---------------------------------------------------------------------
-CR	.equ	0dh
-LF	.equ	0ah
-SPACE	.equ	20h
-ESC	.equ	1bh
+CR		.equ	0dh
+LF		.equ	0ah
+SPACE		.equ	20h
+ESC		.equ	1bh
 
 ;---------------------------------------------------------------------
 ; Main Program
 ;---------------------------------------------------------------------
 
-	;.org	00dd0h			; KS Wichit ROM
-	.org	02000h			; MPF-1 Expansion ROM
-	;.org	04000h			; TEC-1G User RAM
-	;.org	0bd00h			; TEC-1G Expansion RAM/ROM/FRAM
-	;.org	0dd00h			; KS Wichit RAM
+		;.org	00dd0h		; KS Wichit ROM
+		.org	02000h		; MPF-1 Expansion ROM
+		;.org	04000h		; TEC-1G User RAM
+		;.org	0bd00h		; TEC-1G Expansion RAM/ROM/FRAM
+		;.org	0dd00h		; KS Wichit RAM
 	
 MAIN:
 	push	af			; Save state of A. Used at exit
