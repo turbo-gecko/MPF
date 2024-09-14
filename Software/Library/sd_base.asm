@@ -1003,6 +1003,14 @@ isFormatted:
 	ld	de,sdBuff
 	ld	b,6
 
+; _ifCp	ld	a,(de)			; Check to see if the first 6 bytes of
+	; ld	c,a			; the MBR contains "MEMSDS"
+	; ld	a,(hl)
+	; cp	c
+	; jr	nz,_ifCpFail
+	; inc	de
+	; inc	hl
+	; djnz	_ifCp
 	call	strCompare
 	jr	c,_ifCpFail
 
@@ -1295,20 +1303,20 @@ _waitDone
 ; rst20Entry
 ; Entry point from the RST 20H restart call
 ;
-; Input:	H -- RST 20H function call
+; Input:	B -- RST 20H function call
 ; Output:	Sets carry flag on error, clears on success
 ; Destroys:	HL, IX
 ; ----------------------------------------------------------------------------
 rst20Entry:
 	push	af			; Save registers
 	push	bc
-	push	ix
+	push	de
 
 	ld	a,(r20JumpMax)
-	cp	h
+	cp	b
 	jr	nc,_rst20Valid		; Check for a valid jump function
 
-	pop	ix			; Restore registers
+	pop	de			; Restore registers
 	pop	bc
 	pop	af
 
@@ -1316,7 +1324,7 @@ rst20Entry:
 	ret
 
 _rst20Valid
-	ld	a,h			; Set A with the function call H
+	ld	a,b			; Set A with the function call B
 	ld	hl,r20JumpTable		; Get the base to the error table
 	sla	a			; multiple code by 2 for correct index
 	ld	b,0
@@ -1328,7 +1336,7 @@ _rst20Valid
 	ld	h,(ix+1)		; Update HL with jump pointer
 	ld	l,(ix+0)
 
-	pop	ix			; Restore registers
+	pop	de			; Restore registers
 	pop	bc
 	pop	af
 

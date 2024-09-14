@@ -41,7 +41,6 @@ ESC		.equ	1bh
 ; Main Program
 ;---------------------------------------------------------------------
 
-		;.org	00800h		; MPF-1 ROM
 		;.org	00dd0h		; KS Wichit ROM
 		.org	02000h		; MPF-1 Expansion ROM
 		;.org	04000h		; TEC-1G User RAM
