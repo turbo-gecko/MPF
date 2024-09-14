@@ -12,7 +12,7 @@ This repo is for the hardware and software I have developed for the MPF-1 (and o
 ## How to expand the MPF-1
 The following section descibes how to expand the capabilities of the MPF-1 to make use modern conveniences like serial download, SD card storage etc.
 
-![MPF-1 with expansion](https://github.com/turbo-gecko/MPF/blob/main/MPF-1%20with%20RCBus.jpg)
+![MPF-1 with expansion](https://github.com/turbo-gecko/MPF/blob/main/Photos/MPF-1%20with%20RCBus.jpg)
 
 A non-negotiable goal though, is to provide expandability without modification to the original kit. The MPF-1 is after all, a piece of vintage computer equipment, and to physically modify it would take away from it's value as a piece of history. The following expansions make use of the Z80 CPU bus that is the top left 2x20 pin header connector.
 
@@ -67,7 +67,7 @@ Default pin configurations as follows:
 
 Make sure that the SD card module is designed to run off 5VDC and has the 3V3 reg on board to drive the SD card correctly.
 
-![Expansion Bus](https://github.com/turbo-gecko/MPF/blob/main/RCBus-1.jpg)
+![Expansion Bus](https://github.com/turbo-gecko/MPF/blob/main/Photos/RCBus-1.jpg)
 
 ### Using the expansion cards
 Once you have everything up and running, including the U7 ROM, you can try using the hex load program at 2000H to download the 'HELPUS' example (helpus.hex) from https://github.com/turbo-gecko/MPF/tree/main/Software/Work%20Book%20Examples. Download the hex file and run the program at 1800H.
