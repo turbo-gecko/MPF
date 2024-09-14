@@ -1,9 +1,7 @@
 ; ----------------------------------------------------------------------------
-; sd_base.asm
-; Minimal SD card library for ROM usage.
+; sd_base_rom.asm
+; Minimal SD card library using ROM calls.
 ;
-; v1.1 - 18th August 2024
-;	 Fixed issues with card initialisation 
 ; v1.0 - 17th August 2024
 ; ----------------------------------------------------------------------------
 
@@ -30,6 +28,18 @@
 #include "..\\Library\\sd_base_inc.asm"
 ; ----------------------------------------------------------------------------
 
+; ----------------------------------------------------------------------------
+; ROM RST 20H function calls
+; ----------------------------------------------------------------------------
+
+_SD_INIT	.equ	1
+_SD_GET_TYPE	.equ	2
+_SD_SEL_DISK	.equ	3
+_SD_READ_FCB	.equ	4
+_SD_READ_FILE	.equ	5
+_SD_WRITE_FILE	.equ	6
+_SD_FORMAT_CARD	.equ	7
+
 ; ============================================================================
 ; Api calls
 ; ============================================================================
@@ -43,81 +53,9 @@
 ; Destroys:	A, BC, HL
 ; ----------------------------------------------------------------------------
 sdInit:
-	call	spiInit			; Initialise the SPI driver
+	ld	h,_SD_INIT
+	rst	20h
 
-	ld	a,0			; Clear the CID info flag
-	ld	(sdCIDInit),a
-
-	ld	a,SD_INIT_RETRIES	; Number of retries for SD card detection
-	ld	(sdInitRetry),a
-	
-_sdiLoop
-	call	spiReset
-
-	ld	hl,spiCMD0
-	call	sendSPICommand		; Should come back as 01 if card present
-	cp	01h
-	jr	z,_sdiCardFound		; SD card detected
-	ld	a,(sdInitRetry)		; No SD card detected so load retry counter
-	and	a
-	cp	0
-	jr	z,_sdiError1		; No more retries left
-	dec	a
-	ld	(sdInitRetry),a		; Update the retry counter
-	jr	_sdiLoop		; and try again
-	
-_sdiCardFound
-	ld	hl,spiCMD8
-	call	sendSPICommand
-	cp	01
-	jr	nz,_sdiCmd55		; Skip past if CMD8 not supported (older cards)
-	ld	b,4			; Dump 4 bytes of CMD8 status
-
-_sdiGet5Byte
-	call	readSPIByte
-	djnz	_sdiGet5Byte
-
-_sdiCmd55
-	ld	a,SD_INIT_RETRIES	; Number of retries for SD card detection
-	ld	(sdInitRetry),a
-
-_sdiCmd55Loop
-	call	lDelay
-	ld	hl,spiCMD55
-	call	sendSPICommand
-	ld	hl,spiACMD41
-	call	sendSPICommand		; Expect to get 00; init'd. If not, init is in
-					; progress
-	cp	0
-	jr	z,_sdiDone
-	ld	a,(sdInitRetry)		; No init so load retry counter
-	and	a
-	cp	0
-	jr	z,_sdiError4		; No more retries left
-	dec	a
-	ld	(sdInitRetry),a		; Update the retry counter
-	jr	_sdiCmd55Loop		; Try again if not ready. Can take several 
-					; cycles
-
-_sdiDone				; we are initialised!!
-	call	spiIdle			; Set the SPI bus to the idle state
-
-	scf				; clear carry flag on exit
-	ccf
-	ret
-
-_sdiError1
-	ld	a,1			; Get no card detected error message
-	call	errorMsg
-
-	scf				; set carry flag on exit
-	ret
-
-_sdiError4
-	ld	a,4			; Get unable to initialise card error message
-	call	errorMsg
-
-	scf				; set carry flag on exit
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -132,54 +70,10 @@ _sdiError4
 ; Destroys:	A
 ; ----------------------------------------------------------------------------
 getCardType:
-	push	bc			; Save registers
-	push	de
-	push	hl
+	ld	h,_SD_GET_TYPE
+	rst	20h
 
-	call	getCID			; Get the SD card hw info
-	jr	z,_getCT1		; OK, then continue
-	pop	hl			; if not, restore registers
-	pop	de
-	pop	bc
-
-	scf				; Return with carry flag set on error
-	ret	nz			; and return
-
-_getCT1
-	ld	hl,spiCMD58		; Get OCR Register
-	call	sendSPICommand
-	cp	0
-	jp	z,_checkOCROK
-	pop	hl			; if not, restore registers
-	pop	de
-	pop	bc
-
-	scf				; Return with carry flag set on error
 	ret
-	
-_checkOCROK
-	ld	b,4			; 4 bytes returned
-	ld	hl,sdBuff
-
-_getR3Response
-	call	readSPIByte
-	ld	(hl),a
-	inc	hl
-	djnz	_getR3Response
-
-	ld	a,(sdBuff)		; Bit 7 = valid, bit 6 = SDHC if 1,
-					; SDSC if 0
-	and	0c0h
-
-	pop	hl			; Restore registers
-	pop	de
-	pop	bc
-
-	call	spiIdle
-
-	scf				; clear carry flag on exit
-	ccf
-	ret				; and return
 
 ; ----------------------------------------------------------------------------
 ; selectDisk#3
@@ -193,29 +87,9 @@ _getR3Response
 ; Destroys:	A
 ; ----------------------------------------------------------------------------
 selectDisk:
-	cp	0			; Is the disk >= 0?
-	jr	nc,_sdkValid
-	jr	_sdkInv			; No, then not a valid disk number
+	ld	h,_SD_SEL_DISK
+	rst	20h
 
-_sdkValid
-	cp	8			; Is the disk < 8 (0-7)
-	jr	c,_sdkExit
-	jr	_sdkInv			; No, then not a valid disk number
-
-_sdkInv
-	ld	hl,(diskOffset)		; Load the current disk back into A
-	ld	a,h
-
-	scf				; Return error
-	ret
-
-_sdkExit
-	ld	h,a
-	ld	l,0
-	ld	(diskOffset),hl		; Update the new disk offset
-
-	scf				; Return success
-	ccf
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -229,54 +103,8 @@ _sdkExit
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 readSlotFCB:
-	ld	hl,64			; Get first FCB into buffer
-	ld	(currSlot),a		; Save the slot number
-	and	0F8h			; Determine the sector offset
-	srl	a
-	srl	a
-	srl	a
-	add	a,l
-	ld	(currSector),a
-
-	ld	a,(currSlot)		; Remove sector info from slot
-	and	07h
-	ld	(slotOffset),a
-
-	call	readSdSector		; Get the FCB sector for the slot
-	ret	c			; Error has occured so bail out
-
-	xor	a
-
-	ld	hl,dirStrBuff		; Clear the directory buffer
-	ld	a,' '
-	ld	b,DIR_END
-_rsLoop
-	ld	(hl),a
-	inc	hl
-	djnz	_rsLoop
-
-	ld	a,(currSlot)		; Save slot number to dir buffer
-	ld	l,a
-	ld	h,0
-	ld	ix,decimalBuff
-	call	decimalA
-	
-	ld	hl,decimalBuff
-	ld	de,dirStrBuff+DIR_SLOT
-_rsLoop1
-	ld	a,(hl)
-	ld	(de),a
-	cp	' '
-	jr	z,_rsLoop2
-	inc	de
-	inc	hl
-	jr	_rsLoop1
-	
-_rsLoop2
-	ld	a,(slotOffset)		; Restore the slot offset in the sector 
-	call	getFileDir		; Get the rest of the dir contents
-
-	call	spiIdle
+	ld	h,_SD_READ_FCB
+	rst	20h
 
 	ret
 
@@ -291,116 +119,8 @@ _rsLoop2
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 readFile:
-	ld	(currSlot),a		; Save the slot number
-	call	sdInit			; Initialise the SD card
-	jp	nc,_readfCont		; Card detected
-	ld	a,ERR_NO_CARD
-
-	ret
-
-_readfCont
-	call	isFormatted		; SD present and formatted?
-	jp	nc,_readfCont1		; Card formatted
-	ld	a,ERR_NO_FORMAT
-
-	ret
-
-_readfCont1
-	ld	hl,64			; Determine the FCB sector
-	ld	a,(currSlot)
-	and	0f8h
-	srl	a
-	srl	a
-	srl	a
-	add	a,l
-	ld	l,a
-	ld	(currSector),hl
-
-	call	readSdSector
-
-	ld	a,(currSlot)		; Remove sector info from slot
-	and	07h			; A = old style slot (0-7)
-					; currSlot = new style slot (0-127)
-					; currSector = FCB sector
-
-	ld	(fcbOffset),a
-	call	calcOffset		; sets up IY register
-
-	ld	l,(iy+FCB_START_ADDR)	; Start in memory, FFFF = no file
-	ld	h,(iy+FCB_START_ADDR+1)	; Start in memory, FFFF = no file
-
-	ld	de,0ffffh		; 16-bit CP
-	or	a
-	sbc	hl,de
-	add	hl,de
-	jr	nz,_readfValid
-
-	ld	b,01			; error if selecting empty slot
-	scf
-	ret
-
-_readfValid
-	ld	(addrStart),hl
-	ld	(memPos),hl
-
-	ld	l,(iy+FCB_LENGTH)	; TEC memory length
-	ld	h,(iy+FCB_LENGTH+1)	; TEC memory length
-	ld	(memBlockSize),hl
-
-	ld	l,(iy+FCB_START_SECT+2)	; start sector
-	ld	h,(iy+FCB_START_SECT+3)	; start sector
-	ld	(currSector),hl
-
-	ld	l,(iy+FCB_SECT_COUNT)	; now many sectors to load
-	ld	h,(iy+FCB_SECT_COUNT+1)	; now many sectors to load
-	ld	(numSectors),hl
-
-; prep done, now load
-
-_blockFromSD
-	call	readSdSector		; get block
-
-	ld	bc,512
-	ld	hl,(memBlockSize)
-	or	a
-	sbc	hl,bc
-	add	hl,bc
-	jr	nc,_mBlk
-	ld	b,h
-	ld	c,l
-
-_mBlk
-	ld	de,(memPos)		; copy to TEC memory
-	ld	hl,sdBuff
-	ldir
-
-	ld	hl,(numSectors)
-	dec	hl
-	ld	(numSectors),hl
-
-	ld	a,h			; 0 left to go?
-	or	l
-	jr	z,_loadDone
-
-	ld	hl,(currSector)		; next sector
-	inc	hl
-	ld	(currSector),hl
-
-	ld	hl,(memBlockSize)	; decrease count by length
-	ld	bc,512
-	or	a
-	sbc	hl,bc
-	ld	(memBlockSize),hl	; if there's a block theres a transfer....
-
-	ld	hl,(memPos)		; next TEC memory location
-	ld	bc,512
-	add	hl,bc
-	ld	(memPos),hl
-
-	jr	_blockFromSD
-
-_loadDone
-	call	spiIdle
+	ld	h,_SD_READ_FILE
+	rst	20h
 
 	ret
 
@@ -416,170 +136,8 @@ _loadDone
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 writeFile:
-	push	ix
-	pop	hl
-
-	ld	(paramStrPtr),hl	; Save the parameters passed in
-	ld	(fileStart),de
-	ld	(fileLength),bc
-	ld	(currSlot),a
-
-	push	hl
-	ld	hl,(fileStart)		; Add the start address and ...
-	adc	hl,bc			; ... length together
-	dec	hl			; Subtract 1 from the end address
-	ld	(fileEnd),hl		; and store the end address
-
-	pop	hl			; Calculate the current sector for the
-					; slot number given
-	ld	hl,64			; Get first FCB into buffer
-	and	0F8h			; Determine the sector offset
-	srl	a
-	srl	a
-	srl	a
-	add	a,l
-	ld	(currSector),a
-
-	ld	a,(currSlot)		; Remove sector info from slot
-	and	07h
-
-	ld	(fcbOffset),a
-	ld	hl,(currSector)
-	ld	(fcbToUpdate),hl	; where FCB's go, later
-
-	ld	hl,0000h		; calculate correct currSector for 
-					; the write
-	ld	a,(currSector)		; selected by selectSlot
-	ld	b,a			; HL * 128 = page
-
-	sub	64
-	cp	0
-	jr	z,_fixAADone
-	ld	de,1024
-
-_fixAA
-	add	hl,de
-	djnz	_fixAA
-
-_fixAADone
-	ld	a,(fcbOffset)		; calculate offset
-	ld	b,a
-	cp	0
-	jr	z,_fixADone
-	ld	de,128
-
-_fixA
-	add	hl,de
-	djnz	_fixA
-
-_fixADone
-	ld	de,128			; add final offset
-	add	hl,de
-
-	ld	(currSector),hl
-	ld	(startSector),hl
-
-	ld	hl,(fileStart)		; transfer default into working area
-	ld	(memPos),hl
-
-	ld	hl,0
-	ld	(numSectors),hl
-
-_blockToSD
-	ld	bc,512
-	ld	hl,(fileLength)
-	or	a
-	sbc	hl,bc
-	add	hl,bc
-	jr	nc,_mBlk2
-	ld	b,h
-	ld	c,l
-
-_mBlk2
-	ld	de,sdBuff		; RAM > Buff
-	ld	hl,(memPos)
-	ldir
-
-; prep done, now save
-	call	writeSdSector
-	ret	c
-
-; next sector calculations
-	ld	hl,(numSectors)		; count how many written
-	inc	hl
-	ld	(numSectors),hl
-
-	ld	hl,(fileLength)		; decrease count by length
-	ld	bc,512
-	or	a
-	sbc	hl,bc
-
-	jr	z,_writeDone		; 0 bytes left
-	jp	m,_writeDone		; we went negative, so done
-
-	ld	(fileLength),hl		; size of next block
-
-_nextblock
-	ld	hl,currSector		; next sector
-	inc	(hl)
-
-	ld	hl,(memPos)		; next RAM block
-	ld	bc,512
-	add	hl,bc
-	ld	(memPos),hl
-	jr	_blockToSD
-
-_writeDone
-	ld	hl,(fcbToUpdate)	; get correct sector
-	ld	(currSector),hl
-	call	readSdSector
-
-	call	calcOffset
-
-	ld	hl,(paramStrPtr)	; See if we need to update the filename
-	ld	a,h
-	or	l
-	jr	z,_fnDefault		; Use default filename
-
-
-	push	iy
-	push	iy
-	pop	de
-	ld	bc,DESC_SIZE
-	ldir
-	pop	iy
-
-_fnDefault
-	ld	hl,(fileStart)		; update start
-	ld	(iy+FCB_START_ADDR),l
-	ld	(iy+FCB_START_ADDR+1),h
-
-; ******************* Need to check this!
-	ld	hl,(fileEnd)
-	ld	bc,(fileStart)
-	or	a
-	sbc	hl,bc
-	inc	hl			; +1 for start byte
-	ld	(iy+FCB_LENGTH),l	; update length
-	ld	(iy+FCB_LENGTH+1),h	; update length
-
-	xor	a			; not expand
-	ld	(iy+FCB_EXPAND),a
-
-	ld	hl,0
-	ld	(iy+FCB_START_SECT),l	; update start sector MSW
-	ld	(iy+FCB_START_SECT+1),h	; update start sector MSW
-	ld	hl,(startSector)
-	ld	(iy+FCB_START_SECT+2),l	; update start sector LSW
-	ld	(iy+FCB_START_SECT+3),h	; update start sector LSW
-
-	ld	hl,(numSectors)
-	ld	(iy+FCB_SECT_COUNT),l	; update number of sectors
-	ld	(iy+FCB_SECT_COUNT+1),h	; update number of sectors
-
-	call	writeSdSector		; save change
-	ret	c
-	call	spiIdle
+	ld	h,_SD_WRITE_FILE
+	rst	20h
 
 	ret
 
@@ -592,92 +150,10 @@ _fnDefault
 ; Destroys:	A, BC, DE, HL
 ; ----------------------------------------------------------------------------
 sdFormatCard:
-	call	sdInit			; Initialise the SD card
+	ld	h,_SD_FORMAT_CARD
+	rst	20h
 
-; prep MBR
-	ld	hl,sdBuff		; zero out buffer
-	ld	de,sdBuff+1
-	ld	bc,511
-	xor	a
-	ld	(hl),a
-	ldir
-
-	ld	hl,sdFormat		; copy format into buffer
-	ld	de,sdBuff
-	ld	bc,sdFormatLen
-	ldir
-
-	ld	a,0ffh			; Get disk number
-	call	selectDisk
-	
-	ld	de,wordStrBuff
-	call	aToString
-	ld	de,wordStrBuff
-
-	ld	a,(de)			; Add disk number to volume label
-	ld	(sdBuff+19),a
-	inc	de
-	ld	a,(de)
-	ld	(sdBuff+20),a
-
-	ld	a,55h			; write partition signature
-	ld	(sdBuff+510),a
-	ld	a,0aah
-	ld	(sdBuff+511),a
-
-	ld	hl,0			; Write MBR sector
-	ld	(currSector),hl
-	call	writeSdSector
-
-; now prep FCB file tables
-
-	ld	hl,sdBuff		; zero out buffer
-	ld	de,sdBuff+1
-	ld	bc,511
-	xor	a
-	ld	(hl),a
-	ldir
-
-; 8 blocks
-	ld	de,sdBuff
-	ld	b,8			; 64b * 8 = 512b
-
-_fillBuffFcb
-	push	bc
-
-	ld	hl,fcbFormat		; copy format into buffer
-	ld	bc,fcbFormatLen
-	ldir
-
-	ld	hl,fcbFormatSpc		; skip over empty bytes
-	add	hl,de
-	ex	de,hl
-
-	pop	bc
-	djnz	_fillBuffFcb
-
-	ld	hl,0			; set first file number
-	ld	(byteBuff),hl
-	ld	hl,64			; set first sector number
-	ld	(currSector),hl
-
-; now write that out to the card 16 times (16*8 = 128 files max)
-
-_fcbLp
-	call	fnStamp			; tweak the filenames
-	call	writeSdSector
-
-	ld	hl,(currSector)
-	inc	hl
-	ld	(currSector),hl
-
-	ld	a,l			; find when at last sector
-	cp	64+16
-	jr	nz,_fcbLp
-
-	call	spiIdle
-
-	ret				; and return
+	ret
 
 ; ============================================================================
 ; Function calls
@@ -943,15 +419,15 @@ getFileDir:
 	ld	bc,DESC_SIZE
 	ldir
 
-	ld	hl,(fcbStartAddress)	; Get the start address
+	ld	hl,(fcbStartAddress)		; Get the start address
 
-	ld	de,0ffffh		; If it is FFFFH then this is an empty
-	or	a			; slot
+	ld	de,0ffffh			; If it is FFFFH then this is an empty
+	or	a				; slot
 	sbc	hl,de
 	add	hl,de
-	jp	z,_gfNotFound		; This is an empty slot
+	jp	z,_gfNotFound			; This is an empty slot
 
-	ld	hl,(fcbStartAddress)	; Get the start address
+	ld	hl,(fcbStartAddress)		; Get the start address
 	ld	de,dirStrBuff+DIR_START
 	call	hlToString
 
@@ -1005,7 +481,7 @@ isFormatted:
 
 	call	strCompare
 	jr	c,_ifCpFail
-
+	
 	scf
 	ccf				; Successful so clear carry flag 
 	ret
@@ -1287,58 +763,6 @@ _waitDone
 
 	ret
 
-#ifdef ROM_LOAD
-; ----------------------------------------------------------------------------
-; RST 20H entry point
-; ----------------------------------------------------------------------------
-; ----------------------------------------------------------------------------
-; rst20Entry
-; Entry point from the RST 20H restart call
-;
-; Input:	H -- RST 20H function call
-; Output:	Sets carry flag on error, clears on success
-; Destroys:	HL, IX
-; ----------------------------------------------------------------------------
-rst20Entry:
-	push	af			; Save registers
-	push	bc
-	push	ix
-
-	ld	a,(r20JumpMax)
-	cp	h
-	jr	nc,_rst20Valid		; Check for a valid jump function
-
-	pop	ix			; Restore registers
-	pop	bc
-	pop	af
-
-	scf				; Return error in carry flag
-	ret
-
-_rst20Valid
-	ld	a,h			; Set A with the function call H
-	ld	hl,r20JumpTable		; Get the base to the error table
-	sla	a			; multiple code by 2 for correct index
-	ld	b,0
-	ld	c,a
-	adc	hl,bc			; Calculate the offset for the jump
-
-	push	hl
-	pop	ix
-	ld	h,(ix+1)		; Update HL with jump pointer
-	ld	l,(ix+0)
-
-	pop	ix			; Restore registers
-	pop	bc
-	pop	af
-
-	jp	(hl)
-
-	scf				; Return success
-	ccf
-	ret
-#endif
-
 ; ----------------------------------------------------------------------------
 ; Data
 ; ----------------------------------------------------------------------------
@@ -1346,35 +770,18 @@ _rst20Valid
 ; ---------------------------- Error codes
 ; Maximum of 256 error codes. String not to exceed 20 characters
 
-errMax		.db	5			; Number of error messages
+errMax		.db	4			; Number of error messages
 errTable	.dw	err00			; Pointer to error message 0...
 		.dw	err01
 		.dw	err02
 		.dw	err03
-		.dw	err04
 
 err00		.db	"Fatal error",0		; Error message 0...
 err01		.db	"No card detected",0
 err02		.db	"Not an SDHC card",0
 err03		.db	"Disk not formatted",0
-err04		.db	"Unable to initialise card",0
 
 errInvalidCode	.db	"Invalid error code",0
-
-#ifdef ROM_LOAD
-; ---------------------------- Jump Table
-; Maximum of 256 jump points
-
-r20JumpMax	.db	8			; Number of jump points
-r20JumpTable	.dw	mainNoUIEntry		; Jump address
-		.dw	sdInit
-		.dw	getCardType
-		.dw	selectDisk
-		.dw	readSlotFCB
-		.dw	readFile
-		.dw	writeFile
-		.dw	sdFormatCard
-#endif
 
 ; ---------------------------- Strings
 sdFormat	.db	"MEMSDS"		; Signature

@@ -10,7 +10,9 @@
 ;	- 32K RAM/FRAM from 8000H to FFFFH
 ;	  https://smallcomputercentral.com/sc150-paged-ram-module-rc2014/
 ;	  https://z80kits.com/shop/64k-ram-module/
-;	  
+;	 
+; v1.6 - 2nd September 2024
+;
 ; v1.5 - 18th August 2024
 ;	 Fixed issue with disk number not being validated.
 ;	 Uses new sd libraries.
@@ -26,7 +28,7 @@
 ; ----------------------------------------------------------------------------
 ; Uncomment if MinSD has been loaded into the option ROM so that MinOS can
 ; take advantage of the ROM calls to reduce program space.
-;#define	USE_ROM_CALLS
+#define	USE_ROM_CALLS
 
 ; ----------------------------------------------------------------------------
 ; Device specific defines. Uncomment any relevant devices as required.
@@ -60,7 +62,8 @@ HEX_LOAD_ADDR	.equ	0dd0h		; Entry point for hex load program
 #endif
 
 #ifdef MPF-1
-CODE_START	.equ	0e000h		; Requires the upper 32K RAM expansion
+CODE_START	.equ	04000h		; Requires the upper 32K RAM expansion
+;CODE_START	.equ	0e000h		; Requires the upper 32K RAM expansion
 HEX_LOAD_ADDR	.equ	2000h		; Entry point for hex load program
 #endif
 
@@ -76,13 +79,13 @@ HEX_LOAD_ADDR	.equ	0bd00h		; Entry point for hex load program
 ; ----------------------------------------------------------------------------
 		.org CODE_START		; Start of code in RAM
 
-	jp	mainStart			; Skip over version info
+	jp	mainStart		; Skip over version info
 
 ; ----------------------------
 ; App version info
 ; ----------------------------
-swVerMsg	.db "Version 1.5",0
-swInfoMsg	.db "Release build",0
+swVerMsg	.db "Version 1.6.1",0
+swInfoMsg	.db "Debug build",0
 
 mainStart:
 	call	SER_INIT		; Enable the serial port
@@ -1669,27 +1672,15 @@ beep:
 ; ----------------------------------------------------------------------------
 sdErrMsg:
 	call	SER_TX_LINE
-	call	spiIdle
-
-	call	beep
-	call	beep
-	call	beep
-	call	beep
-
-	ret
 
 sdError:
-	ld	de,sdErrorStrNum	; save error code
-	call	aToString
-	xor	a
-	ld	(de),a
-	ld	hl,sdErrorStr
-	call	SER_TX_LINE
-	ld	hl,sdErrorStrNum
-
-sdErr2:	call	SER_TX_LINE
 	call	spiIdle
-	halt
+
+	call	beep
+	call	beep
+	call	beep
+	call	beep
+
 	ret
 
 ; ----------------------------------------------------------------------------
