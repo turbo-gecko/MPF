@@ -27,9 +27,9 @@
 ; ----------------------------
 ; Block 1 - Z80 devices
 ; KS Wichet Z80 Microprocessor Kit
-#define		KSWICHIT
+;#define		KSWICHIT
 ; MPF-1 - Microprofessor-1
-;#define MPF-1
+#define		MPF-1
 
 ; ----------------------------
 ; Block 2 - Serial devices.
