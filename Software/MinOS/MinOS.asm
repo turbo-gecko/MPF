@@ -10,7 +10,11 @@
 ;	- 32K RAM/FRAM from 8000H to FFFFH
 ;	  https://smallcomputercentral.com/sc150-paged-ram-module-rc2014/
 ;	  https://z80kits.com/shop/64k-ram-module/
-;	  
+;	 
+; v1.6 - 15th September 2024
+;	 Fixed issues with error messages
+;	 Added code and data start/end addresses to 'ver' command
+;	 Added simple checksum to 'ver' command
 ; v1.5 - 18th August 2024
 ;	 Fixed issue with disk number not being validated.
 ;	 Uses new sd libraries.
@@ -76,13 +80,13 @@ HEX_LOAD_ADDR	.equ	0bd00h		; Entry point for hex load program
 ; ----------------------------------------------------------------------------
 		.org CODE_START		; Start of code in RAM
 
-	jp	mainStart			; Skip over version info
+	jp	mainStart		; Skip over version info
 
 ; ----------------------------
 ; App version info
 ; ----------------------------
-swVerMsg	.db "Version 1.5",0
-swInfoMsg	.db "Release build",0
+swVerMsg	.db "Version 1.6.1 ",0
+swInfoMsg	.db "Debug build",0
 
 mainStart:
 	call	SER_INIT		; Enable the serial port
@@ -979,7 +983,7 @@ _dcsGetAddr
 	ld	bc,(transferStart)
 	or	a			; 16-bit CP
 	sbc	hl,bc
-	add	hl,bc
+	adc	hl,bc
 	jp	z,_dcsBadParam		; Retry if equal
 	jp	c,_dcsBadParam		; Retry if end<start
 
@@ -1107,9 +1111,78 @@ _dcstCont2
 ; ----------------------------------------------------------------------------
 doCmdVersion:
 	ld	hl,swVerMsg		; Display sw version info
+	call	SER_TX_STRING
+
+	ld	a,'('
+	call	SER_TX_CHAR
+					; Calculate simple checksum
+	ld	bc,CODE_END - CODE_START
+	ld	de,CODE_START
+	ld	hl,0
+
+dcvLoop
+	ld	a,(de)
+	add	a,l
+	ld	l,a
+	adc	a,h
+	sub	l
+	ld	h,a
+	inc	de
+	dec	bc
+	xor	a
+	cp	c
+	jr	nz,dcvLoop
+	xor	a
+	cp	b
+	jr	nz,dcvLoop
+
+	ld	de,wordStrBuff		
+	call	hlToString
+	ld	hl,wordStrBuff
+	call	SER_TX_STRING
+
+	ld	a,')'
+	call	SER_TX_CHAR
+
+	call	sendCrLf
+
+	ld	hl,swInfoMsg		; Display sw build type
+	call	SER_TX_LINE
+
+	ld	hl,codeStartMsg		; Display code start address
+	call	SER_TX_STRING
+
+	ld	de,wordStrBuff		
+	ld	hl,CODE_START
+	call	hlToString
+	ld	hl,wordStrBuff
 	call	SER_TX_LINE
 	
-	ld	hl,swInfoMsg		; Display sw build type
+	ld	hl,codeEndMsg		; Display code end address
+	call	SER_TX_STRING
+
+	ld	de,wordStrBuff		
+	ld	hl,CODE_END
+	call	hlToString
+	ld	hl,wordStrBuff
+	call	SER_TX_LINE
+
+	ld	hl,dataStartMsg		; Display data start address
+	call	SER_TX_STRING
+
+	ld	de,wordStrBuff		
+	ld	hl,DATA_START
+	call	hlToString
+	ld	hl,wordStrBuff
+	call	SER_TX_LINE
+	
+	ld	hl,dataEndMsg		; Display data end address
+	call	SER_TX_STRING
+
+	ld	de,wordStrBuff		
+	ld	hl,DATA_END
+	call	hlToString
+	ld	hl,wordStrBuff
 	call	SER_TX_LINE
 
 	scf
@@ -1669,27 +1742,15 @@ beep:
 ; ----------------------------------------------------------------------------
 sdErrMsg:
 	call	SER_TX_LINE
-	call	spiIdle
-
-	call	beep
-	call	beep
-	call	beep
-	call	beep
-
-	ret
 
 sdError:
-	ld	de,sdErrorStrNum	; save error code
-	call	aToString
-	xor	a
-	ld	(de),a
-	ld	hl,sdErrorStr
-	call	SER_TX_LINE
-	ld	hl,sdErrorStrNum
-
-sdErr2:	call	SER_TX_LINE
 	call	spiIdle
-	halt
+
+	call	beep
+	call	beep
+	call	beep
+	call	beep
+
 	ret
 
 ; ----------------------------------------------------------------------------
@@ -1726,7 +1787,7 @@ doCmdDev3:
 	ret
 
 ; ----------------------------------------------------------------------------
-; doCmdDev1
+; doCmdDev4
 ; Developer command.
 ;
 ; Input:	None
@@ -1736,11 +1797,17 @@ doCmdDev3:
 doCmdDev4:
 	ret
 
+; ----------------------------------------------------------------------------
+codeEndMsg	.db	"Code End Adress   : ",0
+codeStartMsg	.db	"Code Start Adress : ",0
+dataEndMsg	.db	"Data End Adress   : ",0
+dataStartMsg	.db	"Data Start Adress : ",0
+
 ; ------------------------------------------------------------- ;
 ; If at this point in the listing file, the address is greater  ;
 ; than FD00H then this program will overwrite the SD memory     ;
 ; area and will not be compatible with SD function calls.       ;
 ; ------------------------------------------------------------- ;
+CODE_END	.equ	$
 
-	.end
-
+		.end
