@@ -39,6 +39,8 @@ ORG_SAVE_INC:	.equ	$		; Save the current program address
 ; ----------------------------------------------------------------------------
 		.org 	0fd00H
 
+DATA_START	.equ	$
+
 sdBuff		.block	512+2		; 512b + CRC16
 
 addrStart	.block	2
@@ -96,6 +98,6 @@ fcbStartSector	.block 4
 fcbSectorCount	.block 2
 fcbFileType	.block 1
 
-SD_INC_EOD	.equ	$		; Save end of data address
+DATA_END	.equ	$		; Save end of data address
 
 		.org	ORG_SAVE_INC	; Restore current program address
