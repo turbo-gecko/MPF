@@ -2,6 +2,8 @@
 ; sd_base.asm
 ; Minimal SD card library for ROM usage.
 ;
+; v1.2 - 15th September 2024
+;        Fixed issue with being unable to save 8200H bytes or more
 ; v1.1 - 18th August 2024
 ;	 Fixed issues with card initialisation 
 ; v1.0 - 17th August 2024
@@ -343,8 +345,8 @@ _readfValid
 	ld	(addrStart),hl
 	ld	(memPos),hl
 
-	ld	l,(iy+FCB_LENGTH)	; TEC memory length
-	ld	h,(iy+FCB_LENGTH+1)	; TEC memory length
+	ld	l,(iy+FCB_LENGTH)	; memory length
+	ld	h,(iy+FCB_LENGTH+1)	; memory length
 	ld	(memBlockSize),hl
 
 	ld	l,(iy+FCB_START_SECT+2)	; start sector
@@ -370,7 +372,7 @@ _blockFromSD
 	ld	c,l
 
 _mBlk
-	ld	de,(memPos)		; copy to TEC memory
+	ld	de,(memPos)		; copy to memory
 	ld	hl,sdBuff
 	ldir
 
@@ -392,7 +394,7 @@ _mBlk
 	sbc	hl,bc
 	ld	(memBlockSize),hl	; if there's a block theres a transfer....
 
-	ld	hl,(memPos)		; next TEC memory location
+	ld	hl,(memPos)		; next memory location
 	ld	bc,512
 	add	hl,bc
 	ld	(memPos),hl
@@ -515,7 +517,7 @@ _mBlk2
 	sbc	hl,bc
 
 	jr	z,_writeDone		; 0 bytes left
-	jp	m,_writeDone		; we went negative, so done
+	jp	c,_writeDone		; we went negative, so done
 
 	ld	(fileLength),hl		; size of next block
 
